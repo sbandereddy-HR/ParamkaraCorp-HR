@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ParamkaraCorp-HR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --bg: #0a0b0f;
+  --bg1: #111318;
+  --bg2: #181b22;
+  --bg3: #1e222c;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.12);
+  --text: #e8eaf0;
+  --muted: #6b7280;
+  --muted2: #9ca3af;
+  --accent: #4f8ef7;
+  --accent2: #3b7de8;
+  --green: #22c55e;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --teal: #14b8a6;
+  --font-display: 'DM Serif Display', serif;
+  --font-body: 'Sora', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+
+body {
+  font-family: var(--font-body);
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+#sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  background: var(--bg1);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.logo-area {
+  padding: 22px 20px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.logo-name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+.logo-name span { color: var(--accent); }
+.logo-sub {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-top: 3px;
+  font-weight: 500;
+}
+
+.new-chat-btn {
+  margin: 14px 14px 0;
+  padding: 9px 14px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  transition: background 0.15s;
+}
+.new-chat-btn:hover { background: var(--accent2); }
+.new-chat-btn svg { width: 14px; height: 14px; }
+
+.tools-section {
+  padding: 16px 14px 8px;
+  flex: 1;
+  overflow-y: auto;
+}
+.tools-label {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 0 6px;
+  margin-bottom: 8px;
+}
+.tool-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.12s;
+  margin-bottom: 2px;
+}
+.tool-item:hover { background: var(--bg2); }
+.tool-item.active { background: var(--bg3); }
+.tool-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.tool-icon.blue { background: rgba(79,142,247,0.15); }
+.tool-icon.green { background: rgba(34,197,94,0.15); }
+.tool-icon.amber { background: rgba(245,158,11,0.15); }
+.tool-icon.teal { background: rgba(20,184,166,0.15); }
+.tool-name { font-size: 12.5px; color: var(--muted2); font-weight: 400; }
+.tool-item.active .tool-name { color: var(--text); font-weight: 500; }
+
+.sidebar-bottom {
+  padding: 14px;
+  border-top: 1px solid var(--border);
+}
+.model-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  background: var(--bg2);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.model-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.model-badge strong { color: var(--muted2); font-weight: 500; }
+
+/* ── Main area ── */
+#main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-width: 0;
+}
+
+#topbar {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg);
+  flex-shrink: 0;
+}
+#topbar h2 { font-size: 14px; font-weight: 500; color: var(--text); flex: 1; }
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: rgba(34,197,94,0.1);
+  border: 1px solid rgba(34,197,94,0.2);
+  font-size: 11px;
+  color: var(--green);
+}
+.status-pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* ── Messages ── */
+#chat-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  scroll-behavior: smooth;
+}
+#chat-area::-webkit-scrollbar { width: 4px; }
+#chat-area::-webkit-scrollbar-thumb { background: var(--bg3); border-radius: 2px; }
+
+.welcome-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px 24px;
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+.welcome-logo {
+  font-family: var(--font-display);
+  font-size: 38px;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  margin-bottom: 6px;
+}
+.welcome-logo span { color: var(--accent); font-style: italic; }
+.welcome-tagline {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 40px;
+  font-weight: 300;
+}
+.welcome-cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  max-width: 560px;
+  width: 100%;
+}
+.welcome-card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.welcome-card:hover { border-color: var(--border2); background: var(--bg2); transform: translateY(-1px); }
+.wc-icon { font-size: 20px; margin-bottom: 8px; }
+.wc-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+.wc-desc { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+/* Messages */
+.messages-container { padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+
+.msg-row { display: flex; gap: 12px; animation: slideUp 0.25s ease; }
+.msg-row.user { flex-direction: row-reverse; }
+@keyframes slideUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+
+.avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.avatar-circle.agent { background: var(--bg3); border: 1px solid var(--border2); color: var(--accent); font-family: var(--font-display); font-size: 14px; }
+.avatar-circle.user { background: var(--accent); color: white; font-size: 11px; }
+
+.bubble {
+  max-width: 72%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+.bubble.agent {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 4px 12px 12px 12px;
+  color: var(--text);
+}
+.bubble.user {
+  background: var(--accent);
+  color: white;
+  border-radius: 12px 4px 12px 12px;
+}
+
+.bubble a { color: var(--accent); }
+.bubble strong { color: var(--text); font-weight: 500; }
+.bubble code { font-family: var(--font-mono); font-size: 12px; background: var(--bg3); padding: 1px 5px; border-radius: 4px; }
+
+/* Typing indicator */
+.typing-row { display: flex; gap: 12px; animation: slideUp 0.2s ease; }
+.typing-bubble {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 4px 12px 12px 12px;
+  padding: 14px 18px;
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+.typing-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); animation: typingBounce 1.2s infinite; }
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce { 0%,60%,100%{transform:translateY(0);opacity:0.4} 30%{transform:translateY(-5px);opacity:1} }
+
+/* Result cards */
+.result-wrap { margin-top: 10px; }
+
+.r-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.r-card-header {
+  padding: 10px 14px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.r-card-title { font-size: 11px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted2); }
+.verdict-badge {
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.vb-green { background: rgba(34,197,94,0.12); color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+.vb-amber { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+.vb-red { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+
+.r-card-body { padding: 12px 14px; }
+
+.score-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.score-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  border: 2px solid var(--border2);
+  flex-shrink: 0;
+}
+.sc-green { border-color: rgba(34,197,94,0.4); color: #4ade80; }
+.sc-amber { border-color: rgba(245,158,11,0.4); color: #fbbf24; }
+.sc-red { border-color: rgba(239,68,68,0.4); color: #f87171; }
+.score-reason { font-size: 12.5px; color: var(--muted2); line-height: 1.5; }
+
+.check-rows { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.check-row { display: flex; align-items: flex-start; gap: 8px; }
+.check-icon { width: 16px; height: 16px; flex-shrink: 0; margin-top: 1px; }
+.check-text { font-size: 12px; color: var(--muted2); line-height: 1.5; }
+.check-text strong { color: var(--muted2); font-weight: 500; }
+
+.bar-rows { display: flex; flex-direction: column; gap: 7px; }
+.bar-row { display: flex; align-items: center; gap: 8px; }
+.bar-label { font-size: 11.5px; color: var(--muted); width: 100px; flex-shrink: 0; }
+.bar-track { flex: 1; height: 4px; background: var(--bg3); border-radius: 2px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.bar-val { font-size: 11.5px; font-family: var(--font-mono); color: var(--muted2); width: 28px; text-align: right; }
+
+.flag-list, .signal-list { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.flag-item2 { display: flex; gap: 7px; align-items: flex-start; font-size: 12px; color: var(--muted2); }
+.fi-dot { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.fi-red { background: var(--red); }
+.fi-green { background: var(--green); }
+
+.skill-grid { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.skill-row { display: flex; align-items: center; gap: 8px; }
+.skill-name { font-size: 12px; color: var(--muted2); width: 110px; flex-shrink: 0; }
+.skill-bar-track { flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+.skill-bar-fill { height: 100%; border-radius: 3px; }
+.skill-status { font-size: 11px; font-family: var(--font-mono); width: 30px; text-align: right; flex-shrink: 0; }
+
+.ctc-box {
+  background: var(--bg2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.ctc-item-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.ctc-item-val { font-size: 15px; font-weight: 500; font-family: var(--font-mono); margin-top: 2px; }
+
+/* ── Upload zone ── */
+#drop-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,11,15,0.85);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  flex-direction: column;
+  gap: 12px;
+}
+#drop-overlay.show { display: flex; }
+.drop-box {
+  background: var(--bg1);
+  border: 2px dashed var(--accent);
+  border-radius: 16px;
+  width: 360px;
+  padding: 48px 32px;
+  text-align: center;
+}
+.drop-box h3 { font-size: 16px; font-weight: 500; margin-bottom: 6px; }
+.drop-box p { font-size: 13px; color: var(--muted); }
+.drop-close {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  color: var(--muted2);
+  cursor: pointer;
+}
+.drop-close:hover { color: var(--text); }
+
+/* ── Uploaded files chips ── */
+.files-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 8px 20px 0;
+}
+.file-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--muted2);
+  cursor: default;
+  animation: chipIn 0.2s ease;
+}
+@keyframes chipIn { from { opacity:0; transform:scale(0.9) } to { opacity:1; transform:scale(1) } }
+.file-chip-icon { font-size: 13px; }
+.file-chip-remove { cursor: pointer; opacity: 0.5; font-size: 14px; line-height: 1; margin-left: 2px; }
+.file-chip-remove:hover { opacity: 1; }
+.file-chip.detected { border-color: rgba(79,142,247,0.4); color: var(--accent); background: rgba(79,142,247,0.06); }
+
+/* ── Input bar ── */
+#input-bar {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+.input-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 8px 8px 8px 14px;
+  transition: border-color 0.15s;
+}
+.input-wrap:focus-within { border-color: rgba(79,142,247,0.5); }
+#text-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--text);
+  resize: none;
+  min-height: 24px;
+  max-height: 120px;
+  line-height: 1.6;
+}
+#text-input::placeholder { color: var(--muted); }
+.input-actions { display: flex; gap: 6px; align-items: flex-end; }
+.icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: var(--bg2); color: var(--text); border-color: var(--border2); }
+.send-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: var(--accent);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.send-btn:hover { background: var(--accent2); }
+.send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.input-hint { font-size: 11px; color: var(--muted); margin-top: 8px; text-align: center; }
+
+/* Quick chips */
+.quick-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 20px 10px;
+}
+.quick-chip {
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  border: 1px solid var(--border2);
+  color: var(--muted2);
+  cursor: pointer;
+  background: transparent;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+.quick-chip:hover { background: var(--bg2); color: var(--text); border-color: var(--border2); }
+
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+input[type=file] { display: none; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="logo-area">
+    <div class="logo-name">Paramkara<span>Corp</span></div>
+    <div class="logo-sub">HR Intelligence Platform</div>
+  </div>
+
+  <button class="new-chat-btn" onclick="newChat()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M12 5v14M5 12h14" stroke-linecap="round"/>
+    </svg>
+    New Session
+  </button>
+
+  <div class="tools-section">
+    <div class="tools-label">Tools</div>
+    <div class="tool-item active" id="tool-all" onclick="setTool('all')">
+      <div class="tool-icon blue">✦</div>
+      <div class="tool-name">Auto-detect</div>
+    </div>
+    <div class="tool-item" id="tool-jd" onclick="setTool('jd')">
+      <div class="tool-icon blue">⇌</div>
+      <div class="tool-name">JD vs Resume</div>
+    </div>
+    <div class="tool-item" id="tool-offer" onclick="setTool('offer')">
+      <div class="tool-icon amber">⊘</div>
+      <div class="tool-name">Offer Letter</div>
+    </div>
+    <div class="tool-item" id="tool-salary" onclick="setTool('salary')">
+      <div class="tool-icon green">₹</div>
+      <div class="tool-name">Salary Slip</div>
+    </div>
+    <div class="tool-item" id="tool-employment" onclick="setTool('employment')">
+      <div class="tool-icon teal">◈</div>
+      <div class="tool-name">Employment</div>
+    </div>
+  </div>
+
+  <div class="sidebar-bottom">
+    <div class="model-badge">
+      <div class="model-dot"></div>
+      <span>Model: <strong>Llama 3.3 70B</strong></span>
+    </div>
+  </div>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div id="topbar">
+    <h2 id="topbar-title">Auto-detect Mode</h2>
+    <div class="status-pill">
+      <div class="status-pulse"></div>
+      <span>Online</span>
+    </div>
+  </div>
+
+  <div id="chat-area">
+    <div class="welcome-screen" id="welcome">
+      <div class="welcome-logo">Paramkara<span>Corp</span></div>
+      <div class="welcome-tagline">Upload any HR document — I'll analyze it automatically</div>
+      <div class="welcome-cards">
+        <div class="welcome-card" onclick="quickAction('jd')">
+          <div class="wc-icon">⇌</div>
+          <div class="wc-title">JD vs Resume Match</div>
+          <div class="wc-desc">Upload a JD and resume to see skill gap scorecard</div>
+        </div>
+        <div class="welcome-card" onclick="quickAction('offer')">
+          <div class="wc-icon">⊘</div>
+          <div class="wc-title">Offer Letter Verify</div>
+          <div class="wc-desc">Detect fraudulent offer letters — CIN, GST, email checks</div>
+        </div>
+        <div class="welcome-card" onclick="quickAction('salary')">
+          <div class="wc-icon">₹</div>
+          <div class="wc-title">Salary Slip Fraud</div>
+          <div class="wc-desc">Verify PF math, CTC inflation, and authenticity</div>
+        </div>
+        <div class="welcome-card" onclick="quickAction('employment')">
+          <div class="wc-icon">◈</div>
+          <div class="wc-title">Employment History</div>
+          <div class="wc-desc">Cross-check EPFO records, gap analysis</div>
+        </div>
+      </div>
+    </div>
+    <div class="messages-container" id="messages" style="display:none;"></div>
+  </div>
+
+  <div class="files-row" id="files-row"></div>
+  <div class="quick-row" id="quick-row"></div>
+
+  <div id="input-bar">
+    <div class="input-wrap">
+      <textarea id="text-input" placeholder="Ask anything or upload a document…" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <div class="input-actions">
+        <button class="icon-btn" onclick="triggerUpload()" title="Upload PDF/image">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <button class="send-btn" id="send-btn" onclick="sendMessage()" title="Send">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="white">
+            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="input-hint">Supports PDF, JPG, PNG — drag & drop anywhere</div>
+  </div>
+
+  <input type="file" id="file-input" accept=".pdf,.jpg,.jpeg,.png" multiple onchange="handleFiles(this.files)"/>
+</div>
+
+<!-- Drop overlay -->
+<div id="drop-overlay">
+  <div class="drop-box">
+    <div style="font-size:40px;margin-bottom:14px;">📄</div>
+    <h3>Drop documents here</h3>
+    <p>PDF, JPG, or PNG — I'll detect the type automatically</p>
+  </div>
+  <button class="drop-close" onclick="closeDrop()">Cancel</button>
+</div>
+
+<script>
+// ── pdfjsLib setup ──
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+// ── State ──
+let activeTool = 'all';
+let uploadedDocs = [];
+let chatHistory = [];
+let isProcessing = false;
+let sessionStarted = false;
+
+const TOOL_NAMES = {
+  all: 'Auto-detect Mode',
+  jd: 'JD vs Resume Match',
+  offer: 'Offer Letter Verify',
+  salary: 'Salary Slip Fraud Detection',
+  employment: 'Employment History',
+};
+
+const QUICK_CHIPS = {
+  jd: ['What skills are missing?', 'Generate interview questions', 'Compare with another resume'],
+  offer: ['Explain red flags', 'Is CIN valid?', 'Check email domain'],
+  salary: ['Check CTC inflation', 'Verify PF calculation', 'Run math checks'],
+  employment: ['Analyze gaps only', 'EPFO cross-check', 'Compare with resume'],
+  all: ['Upload a document to start', 'What can you verify?', 'How does fraud detection work?'],
+};
+
+// ── Tool switching ──
+function setTool(t) {
+  activeTool = t;
+  document.querySelectorAll('.tool-item').forEach(el => el.classList.remove('active'));
+  document.getElementById('tool-' + t).classList.add('active');
+  document.getElementById('topbar-title').textContent = TOOL_NAMES[t];
+  renderQuickChips();
+}
+
+function renderQuickChips() {
+  const row = document.getElementById('quick-row');
+  const chips = QUICK_CHIPS[activeTool] || [];
+  row.innerHTML = chips.map(c =>
+    `<button class="quick-chip" onclick="useChip('${c}')">${c}</button>`
+  ).join('');
+}
+
+function useChip(text) {
+  document.getElementById('text-input').value = text;
+  sendMessage();
+}
+
+// ── PDF text extraction ──
+async function extractPDFText(file) {
+  return new Promise(async (resolve) => {
+    try {
+      if (typeof pdfjsLib === 'undefined') {
+        resolve({ text: '[PDF text extraction unavailable — pdfjsLib not loaded]', method: 'error' });
+        return;
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      for (let i = 1; i <= Math.min(pdf.numPages, 8); i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        fullText += content.items.map(s => s.str).join(' ') + '\n';
+      }
+      if (fullText.trim().length > 50) {
+        resolve({ text: fullText.trim(), method: 'text' });
+      } else {
+        resolve({ text: fullText.trim() || '[Scanned/image PDF — OCR not available in browser. Please paste text or use a text PDF.]', method: 'scan' });
+      }
+    } catch (e) {
+      resolve({ text: '[Could not extract PDF text: ' + e.message + ']', method: 'error' });
+    }
+  });
+}
+
+async function extractImageText(file) {
+  return '[Image file — OCR not supported in browser mode. For best results, use text-based PDFs or paste the document text directly.]';
+}
+
+// ── File handling ──
+async function handleFiles(fileList) {
+  const files = Array.from(fileList);
+  for (const file of files) {
+    if (uploadedDocs.find(d => d.fileName === file.name)) continue;
+
+    const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    let text = '';
+
+    if (file.type === 'application/pdf') {
+      const r = await extractPDFText(file);
+      text = r.text;
+    } else if (file.type.startsWith('image/')) {
+      text = await extractImageText(file);
+    }
+
+    uploadedDocs.push({ id, fileName: file.name, text, detectedType: null });
+    renderFileChip({ id, fileName: file.name, text });
+  }
+}
+
+function renderFileChip(doc) {
+  const row = document.getElementById('files-row');
+  const ext = doc.fileName.split('.').pop().toUpperCase();
+  const chip = document.createElement('div');
+  chip.className = 'file-chip';
+  chip.id = 'chip_' + doc.id;
+  chip.innerHTML = `<span class="file-chip-icon">📄</span><span>${doc.fileName}</span><span class="file-chip-remove" onclick="removeDoc('${doc.id}')">×</span>`;
+  row.appendChild(chip);
+}
+
+function removeDoc(id) {
+  uploadedDocs = uploadedDocs.filter(d => d.id !== id);
+  const chip = document.getElementById('chip_' + id);
+  if (chip) chip.remove();
+}
+
+function triggerUpload() {
+  document.getElementById('file-input').click();
+}
+
+// ── Drag and drop ──
+document.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('drop-overlay').classList.add('show'); });
+document.getElementById('drop-overlay').addEventListener('dragleave', e => {
+  if (!e.relatedTarget || !document.getElementById('drop-overlay').contains(e.relatedTarget))
+    document.getElementById('drop-overlay').classList.remove('show');
+});
+document.addEventListener('drop', e => {
+  e.preventDefault();
+  document.getElementById('drop-overlay').classList.remove('show');
+  handleFiles(e.dataTransfer.files);
+});
+function closeDrop() { document.getElementById('drop-overlay').classList.remove('show'); }
+
+// ── Chat UI ──
+function showMessages() {
+  if (!sessionStarted) {
+    document.getElementById('welcome').style.display = 'none';
+    document.getElementById('messages').style.display = 'flex';
+    sessionStarted = true;
+  }
+}
+
+function addMsg(role, contentFn) {
+  showMessages();
+  const container = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+
+  const initial = role === 'agent' ? 'P' : 'HR';
+  const avatarClass = role === 'agent' ? 'agent' : 'user';
+  row.innerHTML = `
+    <div class="avatar-circle ${avatarClass}">${initial}</div>
+    <div class="bubble ${role}" id="bubble_${Date.now()}"></div>
+  `;
+  container.appendChild(row);
+
+  const bubble = row.querySelector('.bubble');
+  if (typeof contentFn === 'string') {
+    bubble.innerHTML = md(contentFn);
+  } else {
+    contentFn(bubble);
+  }
+
+  container.scrollTop = container.scrollHeight;
+  return bubble;
+}
+
+function addTyping() {
+  showMessages();
+  const container = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'typing-row';
+  row.id = 'typing-indicator';
+  row.innerHTML = `
+    <div class="avatar-circle agent">P</div>
+    <div class="typing-bubble">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>
+  `;
+  container.appendChild(row);
+  container.scrollTop = container.scrollHeight;
+  return row;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+// minimal markdown
+function md(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\n/g, '<br/>');
+}
+
+// ── Result renderers ──
+function verdictClass(v) {
+  const upper = (v || '').toUpperCase();
+  if (['AUTHENTIC','GENUINE','VALID','MATCH','CLEAN','SHORTLIST'].includes(upper)) return 'vb-green';
+  if (['SUSPICIOUS','MAYBE','PARTIAL','GAPS_FOUND','INFLATED','MINOR_VARIANCE'].includes(upper)) return 'vb-amber';
+  return 'vb-red';
+}
+
+function scoreClass(s) {
+  if (s >= 75) return 'sc-green';
+  if (s >= 50) return 'sc-amber';
+  return 'sc-red';
+}
+
+function barColor(s) {
+  if (s >= 75) return '#22c55e';
+  if (s >= 50) return '#f59e0b';
+  return '#ef4444';
+}
+
+function checkIcon(status) {
+  if (status === 'PASS' || status === 'pass') return `<svg class="check-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#22c55e" stroke-width="1.2"/><path d="M5 8l2 2 4-4" stroke="#22c55e" stroke-width="1.3" stroke-linecap="round"/></svg>`;
+  if (status === 'WARN' || status === 'neutral') return `<svg class="check-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#f59e0b" stroke-width="1.2"/><path d="M8 5v4" stroke="#f59e0b" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="11" r="0.7" fill="#f59e0b"/></svg>`;
+  return `<svg class="check-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#ef4444" stroke-width="1.2"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="#ef4444" stroke-width="1.3" stroke-linecap="round"/></svg>`;
+}
+
+function renderOfferResult(data, bubble) {
+  const score = data.overall_score || 0;
+  const verdict = data.verdict || 'UNKNOWN';
+  const checks = data.checks || {};
+
+  let html = `<div style="margin-bottom:8px;font-size:13px;color:var(--muted2);">Offer letter analysis complete.</div>
+  <div class="result-wrap">
+    <div class="r-card">
+      <div class="r-card-header">
+        <span class="r-card-title">Overall Verdict</span>
+        <span class="verdict-badge ${verdictClass(verdict)}">${verdict}</span>
+      </div>
+      <div class="r-card-body">
+        <div class="score-wrap">
+          <div class="score-circle ${scoreClass(score)}">${score}</div>
+          <div class="score-reason">${data.verdict_reason || ''}</div>
+        </div>
+      </div>
+    </div>`;
+
+  if (Object.keys(checks).length > 0) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Checks</span></div><div class="r-card-body"><div class="bar-rows">`;
+    for (const [key, val] of Object.entries(checks)) {
+      const name = key.replace(/_/g, ' ');
+      const s = val.score || 0;
+      html += `<div class="bar-row">
+        <span class="bar-label">${name}</span>
+        <div class="bar-track"><div class="bar-fill" style="width:${s}%;background:${barColor(s)};"></div></div>
+        <span class="bar-val">${s}</span>
+      </div>`;
+    }
+    html += `</div></div></div>`;
+  }
+
+  if (data.red_flags_list?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Red Flags</span></div><div class="r-card-body"><div class="flag-list">`;
+    data.red_flags_list.forEach(f => { html += `<div class="flag-item2"><div class="fi-dot fi-red"></div><span>${f}</span></div>`; });
+    html += `</div></div></div>`;
+  }
+
+  if (data.positive_signals?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Positive Signals</span></div><div class="r-card-body"><div class="signal-list">`;
+    data.positive_signals.forEach(s => { html += `<div class="flag-item2"><div class="fi-dot fi-green"></div><span>${s}</span></div>`; });
+    html += `</div></div></div>`;
+  }
+
+  html += `</div>`;
+  bubble.innerHTML = html;
+}
+
+function renderSalaryResult(data, bubble) {
+  const score = data.overall_score || 0;
+  const verdict = data.verdict || 'UNKNOWN';
+  const ctc = data.ctc_inflation;
+
+  let html = `<div style="margin-bottom:8px;font-size:13px;color:var(--muted2);">Salary slip analysis complete.</div>
+  <div class="result-wrap">
+    <div class="r-card">
+      <div class="r-card-header">
+        <span class="r-card-title">Authenticity Verdict</span>
+        <span class="verdict-badge ${verdictClass(verdict)}">${verdict}</span>
+      </div>
+      <div class="r-card-body">
+        <div class="score-wrap">
+          <div class="score-circle ${scoreClass(score)}">${score}</div>
+          <div class="score-reason">${data.verdict_reason || data.ai_reasoning || ''}</div>
+        </div>`;
+
+  if (ctc && ctc.derived_annual_ctc) {
+    const fmt = (v) => v ? '₹' + (v/100000).toFixed(2) + 'L' : '—';
+    const iv = ctc.inflation_percent;
+    const ivColor = Math.abs(iv||0) <= 15 ? '#22c55e' : iv > 15 ? '#ef4444' : '#f59e0b';
+    html += `<div class="ctc-box">
+      <div><div class="ctc-item-label">Derived CTC</div><div class="ctc-item-val">${fmt(ctc.derived_annual_ctc)}</div></div>
+      <div><div class="ctc-item-label">Claimed CTC</div><div class="ctc-item-val">${fmt(ctc.claimed_ctc_annual)}</div></div>
+      <div><div class="ctc-item-label">Verdict</div><div class="ctc-item-val" style="font-size:12px;">${ctc.verdict || '—'}</div></div>
+      <div><div class="ctc-item-label">Inflation</div><div class="ctc-item-val" style="color:${ivColor};">${iv != null ? (iv > 0 ? '+' : '') + iv + '%' : '—'}</div></div>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  if (data.rule_checks?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Rule Checks</span></div><div class="r-card-body"><div class="check-rows">`;
+    data.rule_checks.forEach(c => {
+      html += `<div class="check-row">${checkIcon(c.status)}<div class="check-text">${c.finding}</div></div>`;
+    });
+    html += `</div></div></div>`;
+  }
+
+  if (data.red_flags?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Red Flags</span></div><div class="r-card-body"><div class="flag-list">`;
+    data.red_flags.forEach(f => { html += `<div class="flag-item2"><div class="fi-dot fi-red"></div><span>${f}</span></div>`; });
+    html += `</div></div></div>`;
+  }
+
+  html += `</div>`;
+  bubble.innerHTML = html;
+}
+
+function renderJDResult(data, bubble) {
+  const sc = data.scorecard || {};
+  const rec = sc.recommendation || 'UNKNOWN';
+  const pct = sc.match_percentage || 0;
+
+  let html = `<div style="margin-bottom:8px;font-size:13px;color:var(--muted2);">JD vs Resume analysis for <strong>${data.candidate?.name || 'Candidate'}</strong></div>
+  <div class="result-wrap">
+    <div class="r-card">
+      <div class="r-card-header">
+        <span class="r-card-title">Recommendation</span>
+        <span class="verdict-badge ${verdictClass(rec)}">${rec}</span>
+      </div>
+      <div class="r-card-body">
+        <div class="score-wrap">
+          <div class="score-circle ${scoreClass(pct)}">${pct}%</div>
+          <div class="score-reason">${sc.recommendation_reason || ''}<br/><span style="font-size:11px;color:var(--muted);">${sc.mandatory_skills_met || 0}/${sc.mandatory_skills_total || 0} mandatory skills met · ${data.candidate?.total_experience_years || 0} yrs exp</span></div>
+        </div>
+      </div>
+    </div>`;
+
+  if (data.skill_match?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Skill Match</span></div><div class="r-card-body"><div class="skill-grid">`;
+    data.skill_match.forEach(s => {
+      const req = s.required_years || 0;
+      const actual = s.actual_years || 0;
+      const fillPct = req > 0 ? Math.min(100, (actual / req) * 100) : (actual > 0 ? 100 : 0);
+      const col = s.matched ? '#22c55e' : actual > 0 ? '#f59e0b' : '#ef4444';
+      html += `<div class="skill-row">
+        <span class="skill-name">${s.skill}</span>
+        <div class="skill-bar-track"><div class="skill-bar-fill" style="width:${fillPct}%;background:${col};"></div></div>
+        <span class="skill-status" style="color:${col};">${actual}y</span>
+      </div>`;
+    });
+    html += `</div></div></div>`;
+  }
+
+  if (sc.gaps?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Skill Gaps</span></div><div class="r-card-body"><div class="flag-list">`;
+    sc.gaps.forEach(g => { html += `<div class="flag-item2"><div class="fi-dot fi-red"></div><span>${g}</span></div>`; });
+    html += `</div></div></div>`;
+  }
+
+  if (sc.strengths?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Strengths</span></div><div class="r-card-body"><div class="signal-list">`;
+    sc.strengths.forEach(s => { html += `<div class="flag-item2"><div class="fi-dot fi-green"></div><span>${s}</span></div>`; });
+    html += `</div></div></div>`;
+  }
+
+  html += `</div>`;
+  bubble.innerHTML = html;
+}
+
+function renderEmploymentResult(data, bubble) {
+  const verdict = data.verdict || 'UNKNOWN';
+
+  let html = `<div style="margin-bottom:8px;font-size:13px;color:var(--muted2);">Employment history verification — ${data.mode || 'analysis'}</div>
+  <div class="result-wrap">
+    <div class="r-card">
+      <div class="r-card-header">
+        <span class="r-card-title">Verdict</span>
+        <span class="verdict-badge ${verdictClass(verdict)}">${verdict}</span>
+      </div>
+      <div class="r-card-body">
+        <div style="font-size:13px;color:var(--muted2);line-height:1.6;">${data.verdict_reason || ''}</div>`;
+
+  if (data.experience_summary) {
+    const es = data.experience_summary;
+    html += `<div class="ctc-box" style="margin-top:10px;">
+      <div><div class="ctc-item-label">Resume</div><div class="ctc-item-val">${es.resume_total_years || 0}y</div></div>
+      <div><div class="ctc-item-label">Verified</div><div class="ctc-item-val">${es.epfo_total_years || es.verified_total_years || 0}y</div></div>
+      <div><div class="ctc-item-label">Inflation</div><div class="ctc-item-val" style="color:${(es.inflation_years||0)>0?'#ef4444':'#22c55e'};">${es.inflation_years || 0}y</div></div>
+    </div>`;
+  }
+  html += `</div></div>`;
+
+  if (data.matched?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Matched</span></div><div class="r-card-body"><div class="check-rows">`;
+    data.matched.forEach(m => {
+      html += `<div class="check-row">${checkIcon('PASS')}<div class="check-text">${m.resume_company} → ${m.verified_company || m.epfo_company || ''}</div></div>`;
+    });
+    html += `</div></div></div>`;
+  }
+
+  if (data.only_in_resume?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Only in Resume (Unverified)</span></div><div class="r-card-body"><div class="flag-list">`;
+    data.only_in_resume.forEach(c => { html += `<div class="flag-item2"><div class="fi-dot fi-red"></div><span><strong>${c.company}</strong> — ${c.flag || 'Not found in verification source'}</span></div>`; });
+    html += `</div></div></div>`;
+  }
+
+  if (data.gaps?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Employment Gaps</span></div><div class="r-card-body"><div class="check-rows">`;
+    data.gaps.forEach(g => {
+      const sev = g.severity;
+      const st = sev === 'SHORT' ? 'PASS' : sev === 'MEDIUM' ? 'WARN' : 'FAIL';
+      html += `<div class="check-row">${checkIcon(st)}<div class="check-text">${g.label}</div></div>`;
+    });
+    html += `</div></div></div>`;
+  }
+
+  if (data.red_flags?.length) {
+    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Red Flags</span></div><div class="r-card-body"><div class="flag-list">`;
+    data.red_flags.forEach(f => { html += `<div class="flag-item2"><div class="fi-dot fi-red"></div><span>${f}</span></div>`; });
+    html += `</div></div></div>`;
+  }
+
+  html += `</div>`;
+  bubble.innerHTML = html;
+}
+
+// ── Send ──
+async function sendMessage() {
+  if (isProcessing) return;
+  const input = document.getElementById('text-input');
+  const text = input.value.trim();
+  if (!text && uploadedDocs.length === 0) return;
+
+  const userMsg = text || (uploadedDocs.length === 1 ? `Analyze this document: ${uploadedDocs[0].fileName}` : `Analyze these ${uploadedDocs.length} documents`);
+  input.value = '';
+  autoResize(input);
+
+  addMsg('user', userMsg);
+  chatHistory.push({ role: 'user', content: userMsg });
+
+  const docs = [...uploadedDocs];
+  uploadedDocs = [];
+  document.getElementById('files-row').innerHTML = '';
+
+  isProcessing = true;
+  document.getElementById('send-btn').disabled = true;
+  const typing = addTyping();
+
+  try {
+    const payload = {
+      message: text,
+      documents: docs.length > 0 ? docs : undefined,
+      history: chatHistory.slice(-8),
+      mode: activeTool !== 'all' ? activeTool : undefined,
+    };
+
+    const res = await fetch('/.netlify/functions/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json();
+    removeTyping();
+
+    if (data.error) {
+      addMsg('agent', `⚠️ Error: ${data.error}`);
+    } else {
+      const bubble = addMsg('agent', (b) => {
+        if (data.type === 'offer_letter') renderOfferResult(data, b);
+        else if (data.type === 'salary_slip') renderSalaryResult(data, b);
+        else if (data.type === 'jd_resume') renderJDResult(data, b);
+        else if (data.type === 'employment') renderEmploymentResult(data, b);
+        else b.innerHTML = md(data.reply || JSON.stringify(data, null, 2));
+      });
+      chatHistory.push({ role: 'assistant', content: userMsg + ' [result rendered]' });
+    }
+  } catch (err) {
+    removeTyping();
+    addMsg('agent', `⚠️ Network error: ${err.message}. Make sure the Netlify function is deployed and GROQ_API_KEY is set.`);
+  }
+
+  isProcessing = false;
+  document.getElementById('send-btn').disabled = false;
+}
+
+// ── Helpers ──
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function newChat() {
+  chatHistory = [];
+  uploadedDocs = [];
+  sessionStarted = false;
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('messages').style.display = 'none';
+  document.getElementById('welcome').style.display = 'flex';
+  document.getElementById('files-row').innerHTML = '';
+}
+
+function quickAction(tool) {
+  setTool(tool);
+  const msgs = {
+    jd: 'Upload a job description and resume to get a skill match scorecard.',
+    offer: 'Upload an offer letter to verify CIN, GST, and detect fraud.',
+    salary: 'Upload a salary slip to verify authenticity and CTC inflation.',
+    employment: 'Upload a resume (and optionally EPFO history) to verify employment.',
+  };
+  document.getElementById('text-input').value = msgs[tool] || '';
+  document.getElementById('text-input').focus();
+}
+
+// Init
+renderQuickChips();
+</script>
+</body>
+</html>

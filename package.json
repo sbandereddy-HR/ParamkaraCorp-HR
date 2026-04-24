@@ -1,0 +1,12 @@
+{
+  "name": "paramkaracorp-hr",
+  "version": "1.0.0",
+  "description": "ParamkaraCorp-HR Intelligence Platform",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "netlify dev"
+  },
+  "dependencies": {}
+}
