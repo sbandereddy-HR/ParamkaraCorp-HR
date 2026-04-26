@@ -79,14 +79,85 @@ function extractCTC(text) {
 
 // ── Doc type detection ────────────────────────────────────────────────────────
 function detectType(text, fileName) {
-  const t = (text||"").toLowerCase(), f = (fileName||"").toLowerCase();
-  if (f.includes("jd")||f.includes("job_desc")||t.includes("job description")||t.includes("we are looking for")||(t.includes("responsibilities")&&t.includes("requirements"))) return "jd";
-  if (t.includes("offer letter")||t.includes("we are pleased to offer")||t.includes("joining date")||(t.includes("cost to company")&&t.includes("designation"))) return "offer";
-  if (t.includes("salary slip")||t.includes("payslip")||t.includes("gross earnings")||t.includes("net pay")||(t.includes("basic")&&t.includes("hra")&&t.includes("pf"))) return "salary";
-  if (t.includes("epfo")||t.includes("service history")||t.includes("passbook")||t.includes("uan")) return "epfo";
-  if (t.includes("bank statement")||t.includes("account statement")||(t.includes("transaction")&&t.includes("balance"))) return "bank";
-  if (f.includes("resume")||f.includes("cv")||t.includes("curriculum vitae")||(t.includes("experience")&&t.includes("education")&&t.includes("skills"))) return "resume";
-  return "unknown";
+  const t = (text || '').toLowerCase();
+  const f = (fileName || '').toLowerCase();
+ 
+  // ── SALARY — require STRONG explicit signals only ─────────────────
+  // A real salary slip ALWAYS has one of these. A resume NEVER does.
+  const isSalary =
+    t.includes('salary slip') ||
+    t.includes('payslip') ||
+    t.includes('pay slip') ||
+    t.includes('gross earnings') ||
+    t.includes('gross salary') ||
+    t.includes('net pay') ||
+    t.includes('net salary') ||
+    t.includes('take home pay') ||
+    (t.includes('month') && t.includes('basic') && t.includes('hra') &&
+     t.includes('net') && (t.includes('₹') || t.includes('inr') || t.includes('rs.')));
+ 
+  // ── RESUME — strong structural patterns ───────────────────────────
+  // Real resumes always have these combinations
+  const isResume =
+    t.includes('curriculum vitae') ||
+    t.includes('professional summary') ||
+    t.includes('career objective') ||
+    t.includes('work experience') ||
+    (t.includes('experience') && t.includes('education') && t.includes('skills')) ||
+    (t.includes('objective') && t.includes('skills') && t.includes('experience'));
+ 
+  // ── JD — specific JD language ─────────────────────────────────────
+  const isJD =
+    t.includes('job description') ||
+    t.includes('we are looking for') ||
+    t.includes('key responsibilities') ||
+    t.includes('role overview') ||
+    t.includes('mandatory skills') ||
+    t.includes('good to have') ||
+    t.includes('years of experience required') ||
+    (t.includes('responsibilities') && t.includes('requirements') && !isResume);
+ 
+  // ── OFFER LETTER ──────────────────────────────────────────────────
+  const isOffer =
+    t.includes('offer letter') ||
+    t.includes('we are pleased to offer') ||
+    t.includes('joining date') ||
+    t.includes('date of joining') ||
+    (t.includes('cost to company') && t.includes('designation') && !isResume);
+ 
+  // ── EPFO / Service history ────────────────────────────────────────
+  const isEPFO =
+    t.includes('epfo') ||
+    t.includes('service history') ||
+    t.includes('uan') ||
+    (t.includes('passbook') && t.includes('pf'));
+ 
+  // ── BANK ──────────────────────────────────────────────────────────
+  const isBank =
+    t.includes('bank statement') ||
+    t.includes('account statement') ||
+    t.includes('account number') ||
+    (t.includes('transaction') && t.includes('closing balance'));
+ 
+  // ── Priority order ────────────────────────────────────────────────
+  // Resume vs Salary can conflict — resume wins if both detected
+  // because salary signals are now much stricter
+  if (isOffer)  return 'offer';
+  if (isEPFO)   return 'epfo';
+  if (isBank)   return 'bank';
+  if (isJD)     return 'jd';
+  if (isResume) return 'resume';   // resume BEFORE salary
+  if (isSalary) return 'salary';
+ 
+  // ── Filename as last fallback only ────────────────────────────────
+  if (f.includes('resume') || f.includes('_cv') || f.startsWith('cv'))  return 'resume';
+  if (f.includes('jd') || f.includes('job'))                             return 'jd';
+  if (f.includes('offer') || f.includes('appointment'))                  return 'offer';
+  if (f.includes('salary') || f.includes('payslip'))                     return 'salary';
+  if (f.includes('epfo') || f.includes('uan'))                           return 'epfo';
+  if (f.includes('bank') || f.includes('statement'))                     return 'bank';
+ 
+  return 'unknown';
 }
 
 // ── Route to analysis mode ────────────────────────────────────────────────────
