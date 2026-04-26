@@ -1,5 +1,7 @@
-// ParamkaraCorp-HR Agent — v3
-// NEW: CTC prompt flow, salary/pf/bank combos, service-history+resume matching
+// ParamkaraCorp-HR Agent — v4
+// Resume-first guided session flow
+// Modes: gap_analysis, jd_resume, multi_rank, epfo_crosscheck, epfo_only,
+//        ctc_verification, offer_letter, offer_salary, resume_only, multi_resume_nojd
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL        = "llama-3.3-70b-versatile";
@@ -11,6 +13,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+// ── Groq caller ───────────────────────────────────────────────────────────────
 async function groq(messages, json = false, maxTokens = 2500) {
   const body = { model: MODEL, messages, temperature: 0.05, max_tokens: maxTokens };
   if (json) body.response_format = { type: "json_object" };
@@ -30,14 +33,12 @@ async function groq(messages, json = false, maxTokens = 2500) {
   return content;
 }
 
-// Retry wrapper — handles Groq rate-limit / transient 500s
 async function groqWithRetry(messages, json = false, maxTokens = 2500) {
-  try {
-    return await groq(messages, json, maxTokens);
-  } catch (e) {
+  try { return await groq(messages, json, maxTokens); }
+  catch (e) {
     const shouldRetry = e.message.includes("429") || e.message.includes("500") || e.message.includes("503");
     if (!shouldRetry) throw e;
-    await new Promise(r => setTimeout(r, 3000)); // wait 3s then retry once
+    await new Promise(r => setTimeout(r, 3000));
     return await groq(messages, json, maxTokens);
   }
 }
@@ -89,10 +90,8 @@ function extractCTC(text) {
   return null;
 }
 
-// ── NEW: Parse PF monthly contribution amounts from EPFO text ─────────────────
 function parsePFAmounts(text) {
   const amounts = [];
-  // EPFO UMANG passbook style
   const rowPat = /Cont\.?\s+For\s+Due-\s*Month\s+(\d{6})\s+([0-9,]+)/gi;
   let m;
   while ((m = rowPat.exec(text)) !== null) {
@@ -100,7 +99,6 @@ function parsePFAmounts(text) {
     if (!isNaN(v) && v > 0 && v <= 15000) amounts.push(v);
   }
   if (amounts.length > 0) return amounts;
-  // Named label patterns (salary slip style)
   const namedPats = [
     /(?:Employee\s+(?:PF|Provident\s+Fund)|EE\s+PF|EPF\s+Employee)\s*[:\-]?\s*(?:₹|Rs\.?\s*)?([0-9,]+(?:\.\d{2})?)/gi,
     /(?:PF\s+Contribution|EPF\s+Amount|Monthly\s+PF)\s*[:\-]?\s*(?:₹|Rs\.?\s*)?([0-9,]+(?:\.\d{2})?)/gi,
@@ -114,7 +112,6 @@ function parsePFAmounts(text) {
   return amounts;
 }
 
-// ── NEW: Parse bank salary credits ────────────────────────────────────────────
 function parseBankCredits(text) {
   const amounts = [];
   const pats = [
@@ -192,24 +189,22 @@ function detectType(text, fileName) {
   return 'unknown';
 }
 
-// ── NEW: Check if uploaded docs need CTC before analysis ─────────────────────
+// ── CTC needed check ──────────────────────────────────────────────────────────
 function needsCTC(documents, claimedCTC) {
-  if (claimedCTC) return false; // already have it
+  if (claimedCTC) return false;
   const types = documents.map(d => d.detectedType || 'unknown');
   const hasCTCDoc = types.some(t => ['salary','bank','epfo'].includes(t));
   if (!hasCTCDoc) return false;
-  // Try to auto-extract CTC from any doc text
   for (const doc of documents) {
     if (extractCTC(doc.text || '')) return false;
   }
-  return true; // has salary/bank/epfo but no CTC anywhere
+  return true;
 }
 
 // ── Route to analysis mode ────────────────────────────────────────────────────
-function routeMode(documents, modeHint) {
-  if (modeHint === "moonlighting") return "moonlighting";
+function routeMode(documents) {
   const types = documents.map(d => d.detectedType || "unknown");
-  const has = t => types.includes(t);
+  const has  = t => types.includes(t);
   const count = t => types.filter(x => x === t).length;
 
   const hasJD      = has("jd");
@@ -219,43 +214,37 @@ function routeMode(documents, modeHint) {
   const hasEPFO    = has("epfo");
   const hasBank    = has("bank");
 
-  // ── Sidebar mode hints — actually respected now ────────────────────────────
-  if (modeHint === "multi"   && numResumes >= 2) return "multi_rank";
-  if (modeHint === "multi"   && numResumes === 1) return "resume_only"; // only 1 resume, can't rank
-  if (modeHint === "jd"      && hasJD && numResumes >= 2) return "multi_rank";
-  if (modeHint === "jd"      && hasJD && numResumes >= 1) return "jd_resume";
-  if (modeHint === "jd"      && hasJD) return "jd_only";
-  if (modeHint === "ctc")    return "ctc_verification";
-  if (modeHint === "service" && hasEPFO && numResumes >= 1) return "epfo_crosscheck";
-  if (modeHint === "service" && hasEPFO) return "epfo_only";
-  if (modeHint === "offer"   && hasOffer && hasSalary) return "offer_salary";
-  if (modeHint === "offer"   && hasOffer) return "offer_letter";
-
-  // ── Auto-detect fallback ───────────────────────────────────────────────────
-  if (hasJD && numResumes >= 2) return "multi_rank";
-  if (hasJD && numResumes === 1) return "jd_resume";
-  if (hasJD) return "jd_only";
-  if (hasOffer && hasSalary) return "offer_salary";
-  if (hasOffer) return "offer_letter";
+  // EPFO + resume → cross-check employment
   if (hasEPFO && numResumes >= 1) return "epfo_crosscheck";
 
-  const ctcDocCount = [hasSalary, hasBank, hasEPFO].filter(Boolean).length;
-  if (ctcDocCount >= 1) return "ctc_verification";
+  // JD routing
+  if (hasJD && numResumes >= 2)  return "multi_rank";
+  if (hasJD && numResumes === 1) return "jd_resume";
+  if (hasJD)                     return "jd_only";
 
-  if (hasEPFO) return "epfo_only";
+  // Offer letter
+  if (hasOffer && hasSalary)     return "offer_salary";
+  if (hasOffer)                   return "offer_letter";
+
+  // CTC/financial docs
+  const ctcDocCount = [hasSalary, hasBank, hasEPFO].filter(Boolean).length;
+  if (ctcDocCount >= 1)          return "ctc_verification";
+
+  // Resume-only
   if (numResumes >= 2) return "multi_resume_nojd";
-  if (numResumes >= 1) return "resume_only";
+  if (numResumes >= 1) return "resume_only";  // gap analysis
+
   return "unknown_docs";
 }
 
-// ── Build system prompts ──────────────────────────────────────────────────────
-function buildPrompt(documents, claimedCTC, modeHint) {
+// ── Build system prompt ───────────────────────────────────────────────────────
+function buildPrompt(documents, claimedCTC) {
   for (const doc of documents) {
     if (!doc.detectedType || doc.detectedType === "unknown")
       doc.detectedType = detectType(doc.text || "", doc.fileName || "");
   }
 
-  const analysisMode = routeMode(documents, modeHint);
+  const analysisMode = routeMode(documents);
   let effectiveCTC = claimedCTC || null;
   if (!effectiveCTC) {
     for (const doc of documents) { const c = extractCTC(doc.text||""); if (c) { effectiveCTC = c; break; } }
@@ -294,36 +283,36 @@ function buildPrompt(documents, claimedCTC, modeHint) {
     }
   }
 
-  // ── NEW: PF-based CTC validators ──────────────────────────────────────────
+  // PF validators
   const epfoDoc = documents.find(d => d.detectedType === "epfo");
   if (epfoDoc) {
     const pfAmounts = parsePFAmounts(epfoDoc.text || "");
     if (pfAmounts.length > 0) {
       const avgPF = pfAmounts.reduce((a,b)=>a+b,0) / pfAmounts.length;
       const derivedBasic = Math.round(avgPF / 0.12);
-      const derivedMonthly = Math.round(derivedBasic / 0.4); // basic ~40% of gross
+      const derivedMonthly = Math.round(derivedBasic / 0.4);
       const derivedAnnual = derivedMonthly * 12;
-      validatorCtx += `\nPF VALIDATORS (from EPFO passbook):\nPF amounts found: ${pfAmounts.slice(0,6).join(', ')}${pfAmounts.length>6?'...':''}\nAvg PF/month=₹${Math.round(avgPF)} → Derived Basic=₹${derivedBasic} → Derived Annual≈₹${(derivedAnnual/100000).toFixed(2)}L\n`;
+      validatorCtx += `\nPF VALIDATORS:\nPF amounts: ${pfAmounts.slice(0,6).join(', ')}${pfAmounts.length>6?'...':''}\nAvg PF/month=₹${Math.round(avgPF)} → Derived Basic=₹${derivedBasic} → Derived Annual≈₹${(derivedAnnual/100000).toFixed(2)}L\n`;
       if (effectiveCTC) {
         const claimed = effectiveCTC < 500 ? effectiveCTC*100000 : effectiveCTC;
         const pct = Math.round(((claimed-derivedAnnual)/derivedAnnual)*1000)/10;
-        validatorCtx += `PF-CTC Check: Claimed=₹${(claimed/100000).toFixed(2)}L vs PF-Derived=₹${(derivedAnnual/100000).toFixed(2)}L → ${pct>0?'+':''}${pct}% → ${Math.abs(pct)<=20?"NORMAL":pct>40?"HIGHLY_INFLATED":"INFLATED"}\n`;
+        validatorCtx += `PF-CTC Check: Claimed=₹${(claimed/100000).toFixed(2)}L vs PF-Derived=₹${(derivedAnnual/100000).toFixed(2)}L → ${pct>0?'+':''}${pct}%\n`;
       }
     }
   }
 
-  // ── NEW: Bank-based CTC validators ────────────────────────────────────────
+  // Bank validators
   const bankDoc = documents.find(d => d.detectedType === "bank");
   if (bankDoc) {
     const credits = parseBankCredits(bankDoc.text || "");
     if (credits.length > 0) {
       const avgCredit = credits.reduce((a,b)=>a+b,0) / credits.length;
-      const derivedAnnual = Math.round(avgCredit * 12 * 1.15); // net→gross approx
-      validatorCtx += `\nBANK VALIDATORS:\nSalary credits found: ${credits.slice(0,6).map(c=>'₹'+c.toLocaleString('en-IN')).join(', ')}${credits.length>6?'...':''}\nAvg monthly credit=₹${Math.round(avgCredit).toLocaleString('en-IN')} → Derived Annual≈₹${(derivedAnnual/100000).toFixed(2)}L\n`;
+      const derivedAnnual = Math.round(avgCredit * 12 * 1.15);
+      validatorCtx += `\nBANK VALIDATORS:\nCredits: ${credits.slice(0,6).map(c=>'₹'+c.toLocaleString('en-IN')).join(', ')}${credits.length>6?'...':''}\nAvg monthly=₹${Math.round(avgCredit).toLocaleString('en-IN')} → Derived Annual≈₹${(derivedAnnual/100000).toFixed(2)}L\n`;
       if (effectiveCTC) {
         const claimed = effectiveCTC < 500 ? effectiveCTC*100000 : effectiveCTC;
         const pct = Math.round(((claimed-derivedAnnual)/derivedAnnual)*1000)/10;
-        validatorCtx += `Bank-CTC Check: Claimed=₹${(claimed/100000).toFixed(2)}L vs Bank-Derived=₹${(derivedAnnual/100000).toFixed(2)}L → ${pct>0?'+':''}${pct}% → ${Math.abs(pct)<=20?"NORMAL":pct>40?"HIGHLY_INFLATED":"INFLATED"}\n`;
+        validatorCtx += `Bank-CTC Check: Claimed=₹${(claimed/100000).toFixed(2)}L vs Bank-Derived=₹${(derivedAnnual/100000).toFixed(2)}L → ${pct>0?'+':''}${pct}%\n`;
       }
     }
   }
@@ -332,53 +321,67 @@ function buildPrompt(documents, claimedCTC, modeHint) {
   const docSections = documents.map((d, i) => {
     const label = (d.detectedType||"unknown").toUpperCase();
     if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE]`;
-    const limit = d.detectedType === "resume" ? 4000
-            : d.detectedType === "epfo"   ? 2000
-            : 2500;
+    const limit = d.detectedType === "resume" ? 4000 : d.detectedType === "epfo" ? 2000 : 2500;
     return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"").slice(0, limit)}`;
   }).join("\n\n");
 
   const schema = SCHEMAS[analysisMode] || SCHEMAS.unknown_docs;
 
+  const modeSpecificRules = {
+    resume_only: `
+RESUME ANALYSIS RULES (gap_analysis mode):
+- Extract ALL companies with from/to dates in YYYY-MM format.
+- Gap: any period ≥ 1 month between consecutive jobs.
+- Severity: SHORT = 1-2mo, MEDIUM = 3-5mo, LONG = ≥6mo.
+- Label gaps clearly (e.g. "6-month gap between Infosys and Wipro").
+- Overall verdict: CLEAN if total_gap_months < 3, else GAPS_FOUND.
+`,
+    epfo_crosscheck: `
+EPFO CROSS-CHECK RULES:
+- Match resume companies against EPFO companies (fuzzy match, abbreviations ok).
+- Flag companies only in resume as suspicious (unverified).
+- Compute total years from each source.
+- inflation_years = resume_total - epfo_total (positive = inflated experience).
+`,
+    ctc_verification: `
+CTC VERIFICATION RULES:
+- claimed_ctc is already in rupees.
+- salary_slip: check math integrity (gross - deductions = net; PF = 12% of basic, cap ₹1800).
+- pf_analysis: derive basic = PF/0.12, monthly ≈ basic/0.4, annual = monthly*12.
+- bank_analysis: avg salary credits * 12 * 1.15 = derived annual CTC.
+- inflation verdict: NORMAL ≤20%, INFLATED 20-40%, HIGHLY_INFLATED >40%.
+- overall_verdict: combine all available signals.
+`,
+    offer_letter: `
+OFFER LETTER RULES:
+- Use pre-computed CIN and GST validator results exactly.
+- Pre-2017 offer → GST absence is NORMAL (GST introduced July 2017).
+- MNC (Accenture, TCS etc.) → CIN absence may be NORMAL (subsidiary structures).
+- Check: proper letterhead, realistic CTC, valid designation, sensible dates, professional language.
+- Score 0-100; verdict: AUTHENTIC ≥75, SUSPICIOUS 50-74, FAKE <50.
+`,
+  };
+
   const system = `You are ParamkaraCorp-HR, expert Indian HR fraud detection and recruitment AI.
 Analysis mode: ${analysisMode.toUpperCase()}
 ${validatorCtx}
 STRICT RULES:
-1. Output ONLY valid JSON. Zero prose, zero markdown, zero text outside JSON.
+1. Output ONLY valid JSON. Zero prose, zero markdown outside JSON.
 2. verdict_reason, recommendation_reason: ONE short sentence (max 20 words).
 3. strengths/gaps arrays: max 4 items, max 8 words each.
-4. skill names: use exact name from JD or resume, keep concise.
-5. NEVER reproduce document text verbatim.
-6. Use pre-computed validator values exactly as given.
-7. Indian PF ceiling: ₹1800/month (basic cap ₹15000). GST since July 2017.
-8. Scores 0-100: 80+=SHORTLIST, 55-79=MAYBE, <55=REJECT.
-${analysisMode === 'ctc_verification' ? `
-CTC VERIFICATION RULES:
-- claimed_ctc is in rupees (already converted from LPA if needed).
-- salary_slip section: check if slip is GENUINE/SUSPICIOUS/FAKE based on math integrity.
-- pf_analysis: derive basic salary from PF amount (PF = 12% of basic, max ₹1800/month).
-- bank_analysis: avg of salary credits × 12 × 1.15 = derived annual CTC.
-- inflation verdict: NORMAL if ≤20%, INFLATED if 20-40%, HIGHLY_INFLATED if >40%.
-- overall_verdict: combine all available signals. If only one source, base on that.
-` : ''}
-${analysisMode === 'epfo_crosscheck' ? `
-SERVICE VERIFICATION RULES:
-- Match resume companies against EPFO companies (fuzzy match, abbreviations ok).
-- Flag companies only in resume as suspicious.
-- Compute total years from each source.
-- inflation_years = resume_total - epfo_total (if positive, candidate inflated experience).
-` : ''}
-
+4. NEVER reproduce document text verbatim.
+5. Use pre-computed validator values exactly as given.
+6. Indian PF ceiling: ₹1800/month (basic cap ₹15000). GST since July 2017.
+7. Scores 0-100: 80+=SHORTLIST, 55-79=MAYBE, <55=REJECT (for skills).
+${modeSpecificRules[analysisMode] || ''}
 HOW TO COMPUTE actual_years PER SKILL:
-- Read ALL company entries in the resume: company name, start date, end date (or "Present").
-- For each role, identify which skills/tools were used based on job title and description.
+- Read ALL company entries: name, start date, end date (or "Present").
+- For each role, identify skills used based on job title and description.
 - Compute duration: (end_year - start_year) + (end_month - start_month)/12. Round to 1 decimal.
-- Sum durations across all roles where that skill was used → that is actual_years.
-- If a skill is listed in Skills section but no role mentions it, use 0.5 as a conservative estimate.
-- If resume has no dates, use total_experience_years divided by skill count as fallback.
-- DO NOT leave actual_years as 0 if the candidate clearly has the skill — estimate from context.
-- required_years: extract from JD (e.g. "5+ years of Python" → 5). null if JD doesn't specify.
-- matched: true if actual_years >= required_years (or actual_years > 0 when required_years is null).
+- Sum durations across all roles where that skill was used.
+- If a skill is in Skills section but no role mentions it, use 0.5 as conservative estimate.
+- required_years: extract from JD (e.g. "5+ years of Python" → 5). null if not specified.
+- matched: true if actual_years >= required_years (or > 0 when required_years is null).
 
 REQUIRED JSON SCHEMA:
 ${schema}`;
@@ -388,6 +391,19 @@ ${schema}`;
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 const SCHEMAS = {
+
+  resume_only: `{
+  "type": "employment",
+  "mode": "gap_analysis",
+  "candidate_name": "string|null",
+  "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
+  "gaps": [{"from_company": "string", "to_company": "string", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG", "label": "string"}],
+  "total_gap_months": number,
+  "total_experience_years": number,
+  "verdict": "CLEAN"|"GAPS_FOUND",
+  "verdict_reason": "string",
+  "red_flags": ["string"]
+}`,
 
   jd_resume: `{
   "type": "jd_resume",
@@ -479,45 +495,21 @@ const SCHEMAS = {
       "language_quality": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"},
       "red_flags_check": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"}
     },
-    "red_flags_list": ["string"], "positive_signals": ["string"]
+    "red_flags_list": ["string"],
+    "positive_signals": ["string"]
   },
   "salary_check": {
     "overall_score": number, "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE", "verdict_reason": "string",
     "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
     "red_flags": ["string"],
-    "ctc_inflation": {"derived_annual_ctc": number|null, "claimed_ctc_annual": number|null, "inflation_percent": number|null, "verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_CLAIM_TO_COMPARE"}
+    "ctc_inflation": {
+      "derived_annual_ctc": number|null, "claimed_ctc_annual": number|null,
+      "inflation_percent": number|null,
+      "verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_CLAIM_TO_COMPARE"
+    }
   }
 }`,
 
-  salary_slip: `{
-  "type": "salary_slip",
-  "overall_score": number,
-  "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE",
-  "verdict_reason": "string",
-  "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
-  "ai_reasoning": "string",
-  "red_flags": ["string"],
-  "positive_signals": ["string"],
-  "ctc_inflation": {"derived_annual_ctc": number|null, "claimed_ctc_annual": number|null, "inflation_percent": number|null, "verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_CLAIM_TO_COMPARE"}
-}`,
-
-  salary_resume: `{
-  "type": "salary_resume",
-  "salary_check": {
-    "overall_score": number, "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE", "verdict_reason": "string",
-    "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
-    "ai_reasoning": "string", "red_flags": ["string"],
-    "ctc_inflation": {"derived_annual_ctc": number|null, "claimed_ctc_annual": number|null, "inflation_percent": number|null, "verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_CLAIM_TO_COMPARE"}
-  },
-  "resume_check": {
-    "mode": "gap_analysis",
-    "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
-    "gaps": [{"from_company": "string", "to_company": "string", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG", "label": "string"}],
-    "total_gap_months": number, "verdict": "CLEAN"|"GAPS_FOUND", "red_flags": ["string"]
-  }
-}`,
-
-  // ── NEW: CTC Verification — handles all combos of salary/pf/bank ─────────
   ctc_verification: `{
   "type": "ctc_verification",
   "claimed_ctc": number,
@@ -583,27 +575,6 @@ const SCHEMAS = {
   "red_flags": ["string"]
 }`,
 
-  epfo_only: `{
-  "type": "employment",
-  "mode": "epfo_summary",
-  "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present"}],
-  "total_verified_years": number,
-  "verdict": "COMPLETE"|"GAPS_FOUND",
-  "verdict_reason": "string",
-  "red_flags": ["string"]
-}`,
-
-  resume_only: `{
-  "type": "employment",
-  "mode": "gap_analysis",
-  "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
-  "gaps": [{"from_company": "string", "to_company": "string", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG", "label": "string"}],
-  "total_gap_months": number,
-  "verdict": "CLEAN"|"GAPS_FOUND",
-  "verdict_reason": "string",
-  "red_flags": ["string"]
-}`,
-
   multi_resume_nojd: `{
   "type": "multi_resume_nojd",
   "message": "string",
@@ -614,14 +585,6 @@ const SCHEMAS = {
      "verdict": "CLEAN"|"GAPS_FOUND", "total_gap_months": number
     }
   ]
-}`,
-
-  moonlighting: `{
-  "type": "moonlighting",
-  "verdict": "LOW_RISK"|"MEDIUM_RISK"|"HIGH_RISK",
-  "verdict_reason": "string",
-  "signals": [{"signal": "string", "risk": "LOW"|"MEDIUM"|"HIGH"}],
-  "recommendations": ["string"]
 }`,
 
   unknown_docs: `{
@@ -646,26 +609,28 @@ async function chat(message, history) {
 // ── Main handler ──────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: CORS, body: "" };
-  if (event.httpMethod !== "POST") return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "Method not allowed" }) };
-  if (!GROQ_API_KEY) return { statusCode: 500, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify({ error: "GROQ_API_KEY not set" }) };
+  if (event.httpMethod !== "POST")    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "Method not allowed" }) };
+  if (!GROQ_API_KEY)                  return { statusCode: 500, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify({ error: "GROQ_API_KEY not set" }) };
 
   try {
     const body = JSON.parse(event.body || "{}");
-    let { message, documents, history, claimedCTC, mode } = body;
+    let { message, documents, history, claimedCTC } = body;
 
-    // Pure conversation — no documents
+    // ── Pure conversation ─────────────────────────────────────────────────────
     if (!documents || documents.length === 0) {
       const r = await chat(message || "Hello", history);
       return { statusCode: 200, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify(r) };
     }
 
-    // Server-side type detection
+    // ── Server-side type detection ────────────────────────────────────────────
     for (const doc of documents) {
       if (!doc.detectedType || doc.detectedType === "unknown")
         doc.detectedType = detectType(doc.text || "", doc.fileName || "");
     }
 
-    // ── NEW: CTC needed check — return prompt signal ──────────────────────────
+    // ── CTC needed check ──────────────────────────────────────────────────────
+    // NOTE: In v4 frontend handles this before calling agent for most cases.
+    // Guard here for direct API callers or edge cases.
     if (needsCTC(documents, claimedCTC)) {
       return {
         statusCode: 200,
@@ -677,9 +642,11 @@ exports.handler = async (event) => {
       };
     }
 
-    // ── NEW: Service history without resume — return prompt signal ────────────
+    // ── EPFO without resume ────────────────────────────────────────────────────
+    // In v4, the frontend always injects the session resume alongside EPFO.
+    // But guard anyway:
     const types = documents.map(d => d.detectedType);
-    const hasEPFO = types.includes('epfo');
+    const hasEPFO   = types.includes('epfo');
     const hasResume = types.includes('resume');
     if (hasEPFO && !hasResume) {
       return {
@@ -692,7 +659,8 @@ exports.handler = async (event) => {
       };
     }
 
-    const { system, userPrompt, analysisMode, effectiveCTC } = buildPrompt(documents, claimedCTC, mode);
+    // ── Build prompt & call LLM ───────────────────────────────────────────────
+    const { system, userPrompt, analysisMode, effectiveCTC } = buildPrompt(documents, claimedCTC);
     const hasImage = documents.some(d => d.base64Image);
 
     let result;
@@ -712,14 +680,19 @@ exports.handler = async (event) => {
       const vRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: VISION_MODEL, messages: [{ role: "system", content: system }, { role: "user", content: blocks }], temperature: 0.05, max_tokens: 3000, response_format: { type: "json_object" } }),
+        body: JSON.stringify({
+          model: VISION_MODEL,
+          messages: [{ role: "system", content: system }, { role: "user", content: blocks }],
+          temperature: 0.05, max_tokens: 3000,
+          response_format: { type: "json_object" }
+        }),
       });
       if (!vRes.ok) {
         result = await groq([{ role: "system", content: system }, { role: "user", content: "[Image]\n" + userPrompt }], true, 3000);
       } else {
         const vd = await vRes.json();
         const ct = vd.choices?.[0]?.message?.content ?? "{}";
-        const m = ct.match(/\{[\s\S]*\}/);
+        const m  = ct.match(/\{[\s\S]*\}/);
         result = m ? JSON.parse(m[0]) : JSON.parse(ct);
       }
     } else {
@@ -730,31 +703,40 @@ exports.handler = async (event) => {
 
     if (!result.type) result.type = analysisMode;
 
-    // Attach server-computed CTC inflation for salary docs
+    // ── Attach server-computed CTC inflation for salary docs ──────────────────
     if (effectiveCTC) {
       const salDoc = documents.find(d => d.detectedType === "salary" || d.detectedType === "bank");
       if (salDoc) {
         const gross = extractAmt(salDoc.text,"Gross Earnings","Total Earnings","Gross Salary","Gross");
         const basic = extractAmt(salDoc.text,"Basic Salary","Basic Pay","Basic");
         if (gross) {
-          const empPF = basic ? Math.min(basic*0.12,1800) : 1800;
-          const grat  = basic ? basic*0.0481 : 0;
+          const empPF  = basic ? Math.min(basic*0.12,1800) : 1800;
+          const grat   = basic ? basic*0.0481 : 0;
           const derived = Math.round((gross+empPF+grat)*12);
           const claimed = effectiveCTC < 500 ? effectiveCTC*100000 : effectiveCTC;
           const pct = Math.round(((claimed-derived)/derived)*1000)/10;
-          const obj = { derived_annual_ctc:derived, claimed_ctc_annual:claimed, inflation_percent:pct, verdict: Math.abs(pct)<=15?"NORMAL":pct>30?"HIGHLY_INFLATED":"INFLATED" };
+          const obj = {
+            derived_annual_ctc: derived, claimed_ctc_annual: claimed, inflation_percent: pct,
+            verdict: Math.abs(pct)<=15?"NORMAL":pct>30?"HIGHLY_INFLATED":"INFLATED"
+          };
           if (result.salary_check) result.salary_check.ctc_inflation = obj;
           else result.ctc_inflation = obj;
         }
       }
     }
 
-    if (effectiveCTC && !claimedCTC) result._ctc_auto_extracted = effectiveCTC;
-
-    return { statusCode: 200, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify(result) };
+    return {
+      statusCode: 200,
+      headers: { ...CORS, "Content-Type": "application/json" },
+      body: JSON.stringify(result)
+    };
 
   } catch (err) {
     console.error("Fatal:", err.stack || err);
-    return { statusCode: 500, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify({ error: err.message || "Internal error" }) };
+    return {
+      statusCode: 500,
+      headers: { ...CORS, "Content-Type": "application/json" },
+      body: JSON.stringify({ error: err.message || "Internal error" })
+    };
   }
 };
