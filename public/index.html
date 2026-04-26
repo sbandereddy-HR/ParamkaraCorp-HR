@@ -34,18 +34,21 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .tb-status{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted2)}
 .tb-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tb-dot.busy{background:var(--amber);animation:pulse .8s infinite}
+.tb-dot.error{background:var(--red);animation:none}
 .tb-new{padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:.72rem;color:var(--muted2);cursor:pointer;font-family:var(--font-body);transition:all .15s}
 .tb-new:hover{background:var(--bg3);color:var(--text);border-color:var(--green)}
 
-/* ── Session progress bar ── */
-#session-bar{display:none;padding:8px 20px;background:#ffffff;border-bottom:1px solid var(--border);flex-shrink:0}
-#session-bar.show{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.sb-step{display:flex;align-items:center;gap:5px;font-size:.7rem;padding:3px 10px;border-radius:14px;border:1px solid var(--border2);color:var(--muted);background:var(--bg2);transition:all .2s}
-.sb-step.done{background:var(--green-dim);border-color:rgba(13,115,119,0.35);color:var(--green)}
-.sb-step.active{background:var(--amber-dim);border-color:rgba(196,124,0,0.3);color:var(--amber);font-weight:600}
-.sb-step.pending{opacity:.45}
-.sb-sep{font-size:.65rem;color:var(--muted)}
-.sb-badge{font-size:.6rem;padding:1px 5px;border-radius:8px;font-weight:700;font-family:var(--font-mono);background:var(--green);color:#fff;margin-left:2px}
+/* ── Pipeline progress bar ── */
+#pipeline-bar{display:none;padding:8px 20px;background:#ffffff;border-bottom:1px solid var(--border);flex-shrink:0}
+#pipeline-bar.show{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pb-step{display:flex;align-items:center;gap:5px;font-size:.7rem;padding:3px 10px;border-radius:14px;border:1px solid var(--border2);color:var(--muted);background:var(--bg2);transition:all .2s;white-space:nowrap}
+.pb-step.done{background:var(--green-dim);border-color:rgba(13,115,119,0.35);color:var(--green)}
+.pb-step.active{background:var(--amber-dim);border-color:rgba(196,124,0,0.3);color:var(--amber);font-weight:600}
+.pb-step.blocked{opacity:.35}
+.pb-sep{font-size:.65rem;color:var(--muted)}
+.pb-badge{font-size:.6rem;padding:1px 5px;border-radius:8px;font-weight:700;font-family:var(--font-mono);background:var(--green);color:#fff;margin-left:2px}
+.pb-doc-count{font-size:.6rem;padding:1px 6px;border-radius:8px;font-weight:700;font-family:var(--font-mono);background:var(--amber);color:#fff;margin-left:3px}
 
 /* ── Layout ── */
 #shell{flex:1;display:flex;overflow:hidden}
@@ -55,10 +58,13 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 #welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center}
 .wl-title{font-family:var(--font-head);font-size:2.2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
 .wl-title em{font-style:normal;color:var(--green)}
-.wl-sub{font-size:.88rem;color:var(--muted2);margin-bottom:10px;max-width:440px;line-height:1.6}
-.wl-start{margin:18px 0 28px;padding:11px 28px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;font-family:var(--font-head);cursor:pointer;transition:all .18s;letter-spacing:.02em}
+.wl-sub{font-size:.88rem;color:var(--muted2);margin-bottom:10px;max-width:480px;line-height:1.6}
+.wl-pipeline{display:flex;align-items:center;gap:6px;margin:16px 0;flex-wrap:wrap;justify-content:center}
+.wl-pipe-step{font-size:.7rem;padding:4px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:12px;color:var(--muted2);font-family:var(--font-mono)}
+.wl-pipe-arr{font-size:.65rem;color:var(--muted)}
+.wl-start{margin:8px 0 24px;padding:11px 28px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;font-family:var(--font-head);cursor:pointer;transition:all .18s;letter-spacing:.02em}
 .wl-start:hover{background:#0a9499;box-shadow:0 0 14px rgba(13,115,119,0.35)}
-.wl-flow{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:520px;width:100%;margin-top:8px}
+.wl-flow{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:520px;width:100%}
 .wl-step{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:left}
 .wl-step-num{font-family:var(--font-mono);font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:5px}
 .wl-step-title{font-family:var(--font-head);font-size:.8rem;font-weight:700;margin-bottom:3px}
@@ -89,6 +95,8 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 #files-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 18px;flex-shrink:0}
 #files-row:not(:empty){padding-bottom:6px}
 .chip{display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--bg2);border:1px solid var(--border2);border-radius:20px;font-size:.73rem;color:var(--muted2);animation:chipIn .2s ease}
+.chip.chip-resume{border-color:rgba(26,126,212,0.35);background:var(--blue-dim)}
+.chip.chip-error{border-color:rgba(192,57,43,0.35);background:var(--red-dim)}
 @keyframes chipIn{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:scale(1)}}
 .chip-type{font-size:.62rem;padding:1px 6px;border-radius:8px;font-weight:600;font-family:var(--font-mono)}
 .ct-resume{background:var(--blue-dim);color:var(--blue)}
@@ -100,47 +108,56 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .ct-unknown{background:var(--bg3);color:var(--muted)}
 .chip-x{cursor:pointer;opacity:.5;margin-left:2px;transition:opacity .15s}
 .chip-x:hover{opacity:1}
+.chip-dup{font-size:.55rem;padding:1px 5px;border-radius:6px;background:rgba(196,124,0,0.15);color:var(--amber);margin-left:2px;font-family:var(--font-mono)}
 
-/* ── Action hint bar (context-sensitive) ── */
-#action-bar{display:none;align-items:center;gap:10px;padding:9px 18px;background:rgba(13,115,119,0.05);border-top:1px solid rgba(13,115,119,0.15);flex-shrink:0;flex-wrap:wrap}
-#action-bar.show{display:flex}
-.ab-icon{font-size:1rem;flex-shrink:0}
-.ab-text{flex:1;font-size:.75rem;color:var(--muted2);min-width:160px}
-.ab-text strong{color:var(--text)}
-.ab-btn{padding:6px 14px;border:none;border-radius:7px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap;transition:all .15s}
-.ab-btn-primary{background:var(--green);color:#fff}
-.ab-btn-primary:hover{background:#0a9499}
-.ab-btn-secondary{background:var(--bg3);color:var(--muted2);border:1px solid var(--border2)}
-.ab-btn-secondary:hover{color:var(--text);border-color:var(--green)}
+/* ── Pipeline stage banner ── */
+#stage-banner{display:none;align-items:center;gap:10px;padding:8px 18px;flex-shrink:0;border-top:1px solid var(--border)}
+#stage-banner.show{display:flex}
+#stage-banner.stage-upload{background:rgba(13,115,119,0.05);border-color:rgba(13,115,119,0.15)}
+#stage-banner.stage-ctc{background:rgba(196,124,0,0.06);border-color:rgba(196,124,0,0.2)}
+#stage-banner.stage-error{background:rgba(192,57,43,0.05);border-color:rgba(192,57,43,0.2)}
+#stage-banner.stage-analyzing{background:rgba(13,115,119,0.04);border-color:rgba(13,115,119,0.1)}
+.sb-icon{font-size:1rem;flex-shrink:0}
+.sb-info{flex:1;font-size:.75rem;color:var(--muted2);min-width:0}
+.sb-info strong{color:var(--text)}
+.sb-info .sb-sub{font-size:.68rem;color:var(--muted);margin-top:1px}
+.sb-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.sb-btn{padding:6px 14px;border:none;border-radius:7px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap;transition:all .15s}
+.sb-btn-primary{background:var(--green);color:#fff}
+.sb-btn-primary:hover{background:#0a9499}
+.sb-btn-primary:disabled{opacity:.35;cursor:not-allowed}
+.sb-btn-amber{background:var(--amber);color:#fff}
+.sb-btn-amber:hover{background:#e08900}
+.sb-btn-danger{background:var(--red);color:#fff}
+.sb-btn-danger:hover{background:#a93226}
+.sb-btn-ghost{background:var(--bg3);color:var(--muted2);border:1px solid var(--border2)}
+.sb-btn-ghost:hover{color:var(--text);border-color:var(--green)}
 
-/* ── CTC prompt bar ── */
-#ctc-bar{display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(196,124,0,0.06);border-top:1px solid rgba(196,124,0,0.2);flex-shrink:0}
-#ctc-bar.show{display:flex}
-.ctc-bar-label{font-size:.76rem;color:var(--muted2);white-space:nowrap}
-.ctc-bar-label strong{color:var(--amber)}
+/* ── CTC input section ── */
+#ctc-section{display:none;padding:10px 18px;background:rgba(196,124,0,0.06);border-top:1px solid rgba(196,124,0,0.2);flex-shrink:0}
+#ctc-section.show{display:flex;align-items:center;gap:10px}
+.ctc-label-txt{font-size:.76rem;color:var(--muted2);white-space:nowrap}
+.ctc-label-txt strong{color:var(--amber)}
 #ctc-input{flex:1;background:var(--bg3);border:1px solid rgba(245,166,35,0.3);border-radius:7px;padding:6px 12px;color:var(--text);font-size:.82rem;outline:none;font-family:var(--font-body)}
 #ctc-input:focus{border-color:var(--amber)}
-#ctc-submit{padding:6px 16px;background:var(--amber);color:#fff;border:none;border-radius:7px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap}
-#ctc-submit:hover{background:#f5c518}
+#ctc-input.invalid{border-color:var(--red);animation:shake .3s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 
-/* ── Pending panel ── */
-#pending{display:none;align-items:center;gap:10px;padding:8px 18px;background:rgba(13,115,119,0.06);border-top:1px solid rgba(13,115,119,0.18);flex-shrink:0}
-#pending.show{display:flex}
-.pending-info{flex:1;font-size:.76rem;color:var(--muted2)}
-.pending-info strong{color:var(--text)}
-#analyze-btn{padding:6px 18px;background:var(--green);color:#fff;border:none;border-radius:7px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:var(--font-body);transition:all .15s}
-#analyze-btn:hover{background:#0a9499;box-shadow:0 0 12px rgba(13,115,119,0.35)}
-#analyze-btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+/* ── Doc limit warning ── */
+#doc-limit-warn{display:none;padding:7px 18px;background:rgba(196,124,0,0.08);border-top:1px solid rgba(196,124,0,0.15);font-size:.72rem;color:var(--amber);flex-shrink:0}
+#doc-limit-warn.show{display:block}
 
 /* ── Input bar ── */
 #input-bar{padding:10px 16px 14px;border-top:1px solid var(--border2);background:#ffffff;flex-shrink:0}
 .input-wrap{display:flex;gap:6px;align-items:flex-end;background:var(--bg2);border:1px solid rgba(0,0,0,0.15);border-radius:var(--r);padding:7px 7px 7px 14px;transition:border-color .15s}
 .input-wrap:focus-within{border-color:rgba(13,115,119,0.55)}
+.input-wrap.locked{opacity:.6;pointer-events:none}
 #txt{flex:1;background:transparent;border:none;outline:none;font-family:var(--font-body);font-size:.84rem;color:var(--text);resize:none;min-height:22px;max-height:110px;line-height:1.6}
 #txt::placeholder{color:var(--muted)}
 .ib-actions{display:flex;gap:5px;align-items:flex-end}
 .ib-btn{width:32px;height:32px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .ib-btn:hover{background:var(--bg4);color:var(--text);border-color:rgba(13,115,119,0.4)}
+.ib-btn:disabled{opacity:.3;cursor:not-allowed}
 .send-btn{width:32px;height:32px;border-radius:7px;background:var(--green);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .send-btn:hover{background:#0a9499;box-shadow:0 0 10px rgba(13,115,119,0.35)}
 .send-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
@@ -153,6 +170,9 @@ input[type=file]{display:none}
 .drop-box{background:var(--bg1);border:2px dashed rgba(13,115,119,0.4);border-radius:16px;padding:48px 36px;text-align:center}
 .drop-box h3{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:6px}
 .drop-box p{font-size:.8rem;color:var(--muted2)}
+
+/* ── Resume gate ── */
+#resume-gate{display:none;padding:16px 18px;border-top:1px solid var(--border2);background:#ffffff;flex-shrink:0}
 
 /* ══ RESULT CARDS ══════════════════════════════════════════════════ */
 .result-section{margin-top:4px}
@@ -231,10 +251,19 @@ input[type=file]{display:none}
 .sg-r-head{background:rgba(255,71,87,0.06);color:var(--red);border-bottom:1px solid rgba(255,71,87,0.1)}
 .sg-body{padding:9px 11px;background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;display:flex;flex-direction:column;gap:5px}
 .sg-item{font-size:.74rem;color:var(--muted2);display:flex;gap:5px;align-items:flex-start;line-height:1.4}
-
-/* ── Next-step prompt card ── */
-.next-step-card{margin-top:8px;padding:12px 14px;background:var(--amber-dim);border:1px solid rgba(196,124,0,0.2);border-radius:8px;font-size:.78rem;color:var(--amber)}
-.next-step-card strong{color:var(--text)}
+/* ── Full analysis unified card ── */
+.final-decision{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--r);margin-bottom:8px;border:2px solid}
+.fd-hire{background:rgba(13,115,119,0.07);border-color:rgba(13,115,119,0.4)}
+.fd-maybe{background:rgba(196,124,0,0.07);border-color:rgba(196,124,0,0.4)}
+.fd-reject{background:rgba(192,57,43,0.07);border-color:rgba(192,57,43,0.35)}
+.fd-icon{font-size:1.6rem;flex-shrink:0}
+.fd-info{flex:1}
+.fd-verdict{font-family:var(--font-head);font-size:1.1rem;font-weight:800;letter-spacing:.02em;margin-bottom:3px}
+.fd-reason{font-size:.78rem;color:var(--muted2);line-height:1.5}
+.fraud-badge{padding:3px 10px;border-radius:12px;font-size:.68rem;font-weight:700;font-family:var(--font-mono)}
+.fraud-low{background:var(--green-dim);color:var(--green)}
+.fraud-medium{background:var(--amber-dim);color:var(--amber)}
+.fraud-high{background:var(--red-dim);color:var(--red)}
 </style>
 </head>
 <body>
@@ -243,18 +272,24 @@ input[type=file]{display:none}
 <div id="topbar">
   <div class="tb-logo">Paramkara<em>Corp</em></div>
   <div class="tb-spacer"></div>
-  <div class="tb-status"><div class="tb-dot"></div><span id="tb-status">Ready</span></div>
+  <div class="tb-status"><div class="tb-dot" id="status-dot"></div><span id="tb-status">Ready</span></div>
   <div class="tb-sep"></div>
   <button class="tb-new" onclick="newSession()">+ New Session</button>
 </div>
 
-<!-- Session progress bar -->
-<div id="session-bar">
-  <span class="sb-step" id="step-resume">📄 Resume</span>
-  <span class="sb-sep">›</span>
-  <span class="sb-step" id="step-docs">📂 Documents</span>
-  <span class="sb-sep">›</span>
-  <span class="sb-step" id="step-done">✓ Results</span>
+<!-- Pipeline progress bar -->
+<div id="pipeline-bar">
+  <span class="pb-step" id="ps-upload">① Upload</span>
+  <span class="pb-sep">›</span>
+  <span class="pb-step" id="ps-detect">② Detect</span>
+  <span class="pb-sep">›</span>
+  <span class="pb-step" id="ps-validate">③ Validate</span>
+  <span class="pb-sep">›</span>
+  <span class="pb-step" id="ps-queue">④ Queue</span>
+  <span class="pb-sep">›</span>
+  <span class="pb-step" id="ps-analyze">⑤ Analyze</span>
+  <span class="pb-sep">›</span>
+  <span class="pb-step" id="ps-output">⑥ Output</span>
 </div>
 
 <div id="shell">
@@ -263,69 +298,75 @@ input[type=file]{display:none}
   <!-- Welcome screen -->
   <div id="welcome">
     <div class="wl-title">Paramkara<em>Corp</em></div>
-    <div class="wl-sub">AI-powered HR document intelligence — resume-first workflow, session memory</div>
-    <button class="wl-start" onclick="startSession()">⇥ Start New Session</button>
+    <div class="wl-sub">Upload all documents → Click Analyze → ONE final decision. Strict resume-first pipeline.</div>
+    <div class="wl-pipeline">
+      <span class="wl-pipe-step">Upload</span><span class="wl-pipe-arr">→</span>
+      <span class="wl-pipe-step">Detect</span><span class="wl-pipe-arr">→</span>
+      <span class="wl-pipe-step">Validate</span><span class="wl-pipe-arr">→</span>
+      <span class="wl-pipe-step">Queue</span><span class="wl-pipe-arr">→</span>
+      <span class="wl-pipe-step">Analyze Once</span><span class="wl-pipe-arr">→</span>
+      <span class="wl-pipe-step">Output</span>
+    </div>
+    <button class="wl-start" onclick="startSession()">⇥ Start Session</button>
     <div class="wl-flow">
       <div class="wl-step">
         <div class="wl-step-num">STEP 1 — REQUIRED</div>
         <div class="wl-step-title">📄 Upload Resume</div>
-        <div class="wl-step-desc">Start by uploading the candidate resume. All subsequent analysis ties back to it.</div>
+        <div class="wl-step-desc">Resume is mandatory. All other uploads are blocked until resume is confirmed.</div>
       </div>
       <div class="wl-step">
         <div class="wl-step-num">STEP 2 — OPTIONAL</div>
-        <div class="wl-step-title">📋 Paste JD</div>
-        <div class="wl-step-desc">Paste a job description to get a skill match scorecard — shortlist or reject verdict.</div>
+        <div class="wl-step-title">📋 Add More Docs</div>
+        <div class="wl-step-desc">Upload JD, EPFO, salary slips, bank statement, offer letter. All queued — not auto-analyzed.</div>
       </div>
       <div class="wl-step">
-        <div class="wl-step-num">STEP 2 — OPTIONAL</div>
-        <div class="wl-step-title">📜 Service History (EPFO/UAN)</div>
-        <div class="wl-step-desc">Upload EPFO passbook → auto cross-checked against resume for experience inflation.</div>
+        <div class="wl-step-num">STEP 3 — IF NEEDED</div>
+        <div class="wl-step-title">💰 Enter CTC</div>
+        <div class="wl-step-desc">If salary/PF/bank docs present, claimed CTC is required before analysis runs.</div>
       </div>
       <div class="wl-step">
-        <div class="wl-step-num">STEP 2 — OPTIONAL</div>
-        <div class="wl-step-title">💰 Salary / PF / Bank / Offer</div>
-        <div class="wl-step-desc">Upload salary slips, PF statement, bank statement, or offer letter → CTC fraud detection.</div>
+        <div class="wl-step-num">STEP 4 — FINAL</div>
+        <div class="wl-step-title">⚡ Click Analyze</div>
+        <div class="wl-step-desc">One combined analysis call. One final decision: HIRE / MAYBE / REJECT.</div>
       </div>
     </div>
   </div>
 
-  <!-- Chat messages (hidden until session starts) -->
+  <!-- Chat messages -->
   <div id="chat-area" style="display:none;flex:1;overflow-y:auto">
     <div id="messages"></div>
   </div>
 
-  <!-- Pending panel -->
-  <div id="pending">
-    <div class="pending-info" id="pending-info">Ready</div>
-    <button id="analyze-btn" onclick="runAnalysis()" disabled>Analyze →</button>
-  </div>
+  <!-- Doc limit warning -->
+  <div id="doc-limit-warn"></div>
 
   <!-- File chips -->
   <div id="files-row"></div>
 
-  <!-- Context-sensitive action bar -->
-  <div id="action-bar">
-    <span class="ab-icon" id="ab-icon">💡</span>
-    <span class="ab-text" id="ab-text">—</span>
-    <button class="ab-btn ab-btn-secondary" id="ab-btn-skip" onclick="dismissActionBar()" style="display:none">Skip</button>
-    <button class="ab-btn ab-btn-primary" id="ab-btn-act" onclick="actionBarClick()">→</button>
+  <!-- Stage banner (context-sensitive, single unified panel) -->
+  <div id="stage-banner">
+    <span class="sb-icon" id="sb-icon">💡</span>
+    <div class="sb-info">
+      <div id="sb-main-text">—</div>
+      <div class="sb-sub" id="sb-sub-text"></div>
+    </div>
+    <div class="sb-actions" id="sb-actions"></div>
   </div>
 
-  <!-- CTC prompt bar -->
-  <div id="ctc-bar">
-    <span class="ctc-bar-label">💰 <strong>Candidate CTC?</strong> Enter claimed CTC (LPA):</span>
-    <input id="ctc-input" type="number" placeholder="e.g. 12.5" step="0.1" min="0"
-      onkeydown="if(event.key==='Enter')submitCTC()"/>
-    <button id="ctc-submit" onclick="submitCTC()">Verify →</button>
+  <!-- CTC input -->
+  <div id="ctc-section">
+    <span class="ctc-label-txt">💰 <strong>Claimed CTC?</strong> Enter LPA:</span>
+    <input id="ctc-input" type="number" placeholder="e.g. 12.5" step="0.1" min="0" onkeydown="if(event.key==='Enter')submitCTC()"/>
+    <button class="sb-btn sb-btn-amber" onclick="submitCTC()">Confirm CTC →</button>
   </div>
 
   <!-- Input bar -->
   <div id="input-bar" style="display:none">
-    <div class="input-wrap">
+    <div class="input-wrap" id="input-wrap">
       <textarea id="txt" placeholder="Paste a Job Description, or ask anything…" rows="1"
         onkeydown="onKey(event)" oninput="autoResize(this)"></textarea>
       <div class="ib-actions">
-        <button class="ib-btn" onclick="document.getElementById('file-in').click()" title="Upload files">
+        <button class="ib-btn" id="upload-btn" onclick="triggerUpload()" title="Upload files">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke-linecap="round"/></svg>
         </button>
         <button class="send-btn" id="send-btn" onclick="send()" title="Send">
@@ -333,16 +374,16 @@ input[type=file]{display:none}
         </button>
       </div>
     </div>
-    <div class="ib-hint" id="ib-hint">Upload resume first to begin session</div>
+    <div class="ib-hint" id="ib-hint">Upload resume first to begin</div>
   </div>
 
-  <!-- Resume-first upload prompt (shown before resume uploaded) -->
-  <div id="resume-gate" style="display:none;padding:16px 18px;border-top:1px solid var(--border2);background:#ffffff">
-    <div style="display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px dashed rgba(13,115,119,0.35);border-radius:10px;padding:16px 20px;cursor:pointer" onclick="document.getElementById('file-in').click()">
+  <!-- Resume gate -->
+  <div id="resume-gate">
+    <div style="display:flex;align-items:center;gap:14px;background:var(--bg2);border:2px dashed rgba(13,115,119,0.35);border-radius:10px;padding:16px 20px;cursor:pointer" onclick="triggerUpload()">
       <div style="width:44px;height:44px;border-radius:10px;background:var(--green-dim);border:1px solid rgba(13,115,119,0.25);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">📄</div>
       <div>
         <div style="font-family:var(--font-head);font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:3px">Upload Candidate Resume to Begin</div>
-        <div style="font-size:.73rem;color:var(--muted2)">PDF · DOCX · JPG · PNG — drag & drop anywhere</div>
+        <div style="font-size:.73rem;color:var(--muted2)">PDF · DOCX · JPG · PNG — resume is required before any other document</div>
       </div>
       <div style="margin-left:auto">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -364,26 +405,272 @@ input[type=file]{display:none}
 </div>
 
 <script>
-// ── PDF.js ─────────────────────────────────────────────────────────────────────
+// ── PDF.js setup ───────────────────────────────────────────────────────────────
 if (typeof pdfjsLib !== 'undefined')
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  SESSION STATE
+//  PIPELINE STATES
+//  IDLE → RESUME_NEEDED → UPLOADING → QUEUED → CTC_NEEDED → READY → ANALYZING → DONE → ERROR
 // ══════════════════════════════════════════════════════════════════════════════
-let session = {
-  started: false,
-  resumeUploaded: false,           // resume confirmed in session
-  resumeDoc: null,                 // { text, fileName } — persisted across turns
-  history: [],                     // conversation history
+const STATES = {
+  IDLE:          'IDLE',
+  RESUME_NEEDED: 'RESUME_NEEDED',
+  UPLOADING:     'UPLOADING',
+  QUEUED:        'QUEUED',
+  CTC_NEEDED:    'CTC_NEEDED',
+  READY:         'READY',
+  ANALYZING:     'ANALYZING',
+  DONE:          'DONE',
+  ERROR:         'ERROR',
 };
 
-let docs           = [];           // staged docs (queued for analysis)
-let busy           = false;
-let pendingCnt     = 0;
-let pendingCTCDocs = [];
-let pendingEPFODocs = [];
-let actionBarAction = null;        // callback for action bar button
+const DOC_PRIORITY = ['resume','jd','salary','epfo','bank','offer','unknown'];
+const DOC_CHAR_LIMITS = {resume:3000,jd:1500,salary:1500,epfo:1500,bank:1500,offer:1500,unknown:800};
+const MAX_DOCS = 4;
+const SESSION_KEY = 'pcorp_session_v5';
+
+// ── Session state ──────────────────────────────────────────────────────────────
+let state = STATES.IDLE;
+let session = {
+  started: false,
+  resumeUploaded: false,
+  resumeDoc: null,          // { id, text, fileName, hash }
+  history: [],
+  claimedCTC: null,
+  lastResult: null,
+};
+let queue = [];             // docs staged for analysis (excluding resume which is in session)
+let readingCount = 0;       // files currently being extracted
+let lastError = null;       // { message, retryFn }
+
+// ── Restore session from localStorage ─────────────────────────────────────────
+try {
+  const saved = localStorage.getItem(SESSION_KEY);
+  if (saved) {
+    const parsed = JSON.parse(saved);
+    if (parsed.resumeDoc) {
+      session = { ...session, ...parsed };
+      // Queue is NOT persisted (too heavy), only resume + ctc
+    }
+  }
+} catch(e) { /* ignore */ }
+
+function persistSession() {
+  try {
+    const toSave = {
+      started: session.started,
+      resumeUploaded: session.resumeUploaded,
+      resumeDoc: session.resumeDoc,
+      history: session.history.slice(-10),
+      claimedCTC: session.claimedCTC,
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(toSave));
+  } catch(e) { /* ignore quota errors */ }
+}
+
+// ── Content hash for deduplication ────────────────────────────────────────────
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < Math.min(str.length, 500); i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return h.toString(36);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  STATE MACHINE — single transition function
+// ══════════════════════════════════════════════════════════════════════════════
+function transition(newState, data = {}) {
+  const prev = state;
+  state = newState;
+  console.log(`[PIPELINE] ${prev} → ${newState}`, data.reason || '');
+  renderPipelineState();
+}
+
+function renderPipelineState() {
+  // ── Pipeline bar steps ────────────────────────────────────────────────────
+  const steps = {
+    'ps-upload':   [STATES.UPLOADING, STATES.RESUME_NEEDED],
+    'ps-detect':   [STATES.UPLOADING],
+    'ps-validate': [STATES.QUEUED, STATES.CTC_NEEDED],
+    'ps-queue':    [STATES.QUEUED, STATES.CTC_NEEDED, STATES.READY],
+    'ps-analyze':  [STATES.ANALYZING],
+    'ps-output':   [STATES.DONE],
+  };
+  const doneStates = {
+    'ps-upload':   [STATES.QUEUED, STATES.CTC_NEEDED, STATES.READY, STATES.ANALYZING, STATES.DONE],
+    'ps-detect':   [STATES.QUEUED, STATES.CTC_NEEDED, STATES.READY, STATES.ANALYZING, STATES.DONE],
+    'ps-validate': [STATES.READY, STATES.ANALYZING, STATES.DONE],
+    'ps-queue':    [STATES.ANALYZING, STATES.DONE],
+    'ps-analyze':  [STATES.DONE],
+    'ps-output':   [],
+  };
+  for (const [id, activeStates] of Object.entries(steps)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    const done = (doneStates[id] || []).includes(state);
+    const active = activeStates.includes(state);
+    el.className = 'pb-step ' + (done ? 'done' : active ? 'active' : 'blocked');
+  }
+
+  // ── Status dot ───────────────────────────────────────────────────────────
+  const dot = document.getElementById('status-dot');
+  if (state === STATES.ANALYZING || state === STATES.UPLOADING) {
+    dot.className = 'tb-dot busy';
+  } else if (state === STATES.ERROR) {
+    dot.className = 'tb-dot error';
+  } else {
+    dot.className = 'tb-dot';
+  }
+
+  // ── Stage banner ─────────────────────────────────────────────────────────
+  const ctcSection = document.getElementById('ctc-section');
+  const docLimitWarn = document.getElementById('doc-limit-warn');
+
+  // Hide CTC by default
+  ctcSection.classList.remove('show');
+
+  // Doc limit warning
+  const overLimit = queue.length + 1 > MAX_DOCS; // +1 for resume
+  if (overLimit) {
+    const willDrop = prioritizeQueue().dropped;
+    if (willDrop.length > 0) {
+      docLimitWarn.classList.add('show');
+      docLimitWarn.textContent = `⚠ Doc limit: max ${MAX_DOCS} docs. Will drop lowest-priority: ${willDrop.map(d=>d.fileName).join(', ')}`;
+    } else {
+      docLimitWarn.classList.remove('show');
+    }
+  } else {
+    docLimitWarn.classList.remove('show');
+  }
+
+  switch (state) {
+
+    case STATES.IDLE:
+    case STATES.RESUME_NEEDED:
+      hideStageBanner();
+      setStatus('Upload resume to begin');
+      break;
+
+    case STATES.UPLOADING:
+      showStageBanner('stage-upload', '⏳', `<strong>Reading ${readingCount} file(s)…</strong>`, 'Extracting text from documents', [], 'sb-btn-ghost');
+      setStatus('Reading files…');
+      break;
+
+    case STATES.QUEUED: {
+      const docNames = queue.map(d => {
+        const ui = TYPE_UI[d.detectedType] || TYPE_UI.unknown;
+        return `<span style="color:var(--text);font-weight:600">${d.fileName}</span> <span class="chip-type ${ui.cls}">${ui.label}</span>`;
+      }).join(', ') || '—';
+      const needsCTC = queueHasCTCDocs() && !session.claimedCTC;
+      const actions = needsCTC ? [] : [
+        { label: `⚡ Analyze (${queue.length + 1} docs)`, cls: 'sb-btn-primary', fn: 'runAnalysis()' }
+      ];
+      showStageBanner('stage-upload', '📂',
+        `<strong>${queue.length} doc${queue.length!==1?'s':''} queued</strong> + resume — ready to analyze`,
+        docNames, actions);
+      setStatus(`${queue.length + 1} doc${queue.length>0?'s':''} ready`);
+      // Persist upload state in session bar
+      document.getElementById('ps-queue').innerHTML =
+        `④ Queue <span class="pb-doc-count">${queue.length+1}</span>`;
+      break;
+    }
+
+    case STATES.CTC_NEEDED:
+      ctcSection.classList.add('show');
+      document.getElementById('ctc-input').focus();
+      showStageBanner('stage-ctc', '💰',
+        '<strong>CTC required</strong> before analysis',
+        'Salary/PF/bank docs detected — enter candidate\'s claimed CTC (LPA)', []);
+      setStatus('Enter CTC to continue');
+      break;
+
+    case STATES.READY: {
+      const actions = [
+        { label: `⚡ Analyze Now`, cls: 'sb-btn-primary', fn: 'runAnalysis()' }
+      ];
+      const ctcTxt = session.claimedCTC ? ` · CTC: ₹${(session.claimedCTC/100000).toFixed(1)}L` : '';
+      showStageBanner('stage-upload', '✅',
+        `<strong>All checks passed</strong> — ready for analysis`,
+        `${queue.length + 1} docs queued${ctcTxt}`, actions);
+      setStatus('Ready to analyze');
+      break;
+    }
+
+    case STATES.ANALYZING:
+      showStageBanner('stage-analyzing', '🔬',
+        '<strong>Analyzing…</strong> Do not close this tab',
+        'Single combined analysis in progress', []);
+      setStatus('Analyzing…');
+      // Disable analyze button during analysis
+      document.getElementById('upload-btn') && (document.getElementById('upload-btn').disabled = true);
+      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = true);
+      break;
+
+    case STATES.DONE:
+      hideStageBanner();
+      setStatus('Analysis complete');
+      // Re-enable upload for additional analysis
+      document.getElementById('upload-btn') && (document.getElementById('upload-btn').disabled = false);
+      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
+      break;
+
+    case STATES.ERROR:
+      const errMsg = lastError?.message || 'Unknown error';
+      const actions2 = lastError?.retryFn ? [
+        { label: '↺ Retry', cls: 'sb-btn-danger', fn: '__retryError()' }
+      ] : [];
+      showStageBanner('stage-error', '🚨',
+        `<strong>Error</strong> — ${escapeHtml(errMsg)}`,
+        'Session preserved. Click Retry to try again.', actions2);
+      setStatus('Error — see below');
+      document.getElementById('upload-btn') && (document.getElementById('upload-btn').disabled = false);
+      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
+      break;
+  }
+
+  // Pipeline bar visibility
+  if (session.started)
+    document.getElementById('pipeline-bar').classList.add('show');
+}
+
+// ── Stage banner helpers ───────────────────────────────────────────────────────
+function showStageBanner(cls, icon, mainText, subText, actions) {
+  const banner = document.getElementById('stage-banner');
+  banner.className = `show ${cls}`;
+  document.getElementById('sb-icon').textContent = icon;
+  document.getElementById('sb-main-text').innerHTML = mainText;
+  document.getElementById('sb-sub-text').innerHTML = subText;
+
+  const actEl = document.getElementById('sb-actions');
+  actEl.innerHTML = '';
+  (actions || []).forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = `sb-btn ${a.cls}`;
+    btn.innerHTML = a.label;
+    btn.setAttribute('onclick', a.fn);
+    actEl.appendChild(btn);
+  });
+}
+
+function hideStageBanner() {
+  document.getElementById('stage-banner').className = '';
+}
+
+function escapeHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function setStatus(s) {
+  document.getElementById('tb-status').textContent = s;
+}
+
+// ── Retry helper (global for onclick) ─────────────────────────────────────────
+function __retryError() {
+  if (lastError?.retryFn) lastError.retryFn();
+}
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  DOC TYPE DETECTOR
@@ -407,8 +694,9 @@ function detectType(text, fileName) {
 
   const isJD =
     t.includes('job description') || t.includes('we are looking for') ||
-    t.includes('key responsibilities') || t.includes('mandatory skills') ||
-    t.includes('good to have') ||
+    t.includes('key responsibilities') || t.includes('role overview') ||
+    t.includes('mandatory skills') || t.includes('good to have') ||
+    t.includes('years of experience required') ||
     (t.includes('responsibilities') && t.includes('requirements') && !isResume);
 
   const isOffer =
@@ -422,6 +710,7 @@ function detectType(text, fileName) {
 
   const isBank =
     t.includes('bank statement') || t.includes('account statement') ||
+    t.includes('account number') ||
     (t.includes('transaction') && t.includes('closing balance'));
 
   if (isOffer)  return 'offer';
@@ -449,61 +738,29 @@ function looksLikeJD(text) {
           'experience required','skills required'].filter(s=>t.includes(s)).length >= 2;
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  SESSION PROGRESS UI
-// ══════════════════════════════════════════════════════════════════════════════
-function updateSessionBar() {
-  if (!session.started) { document.getElementById('session-bar').classList.remove('show'); return; }
-  document.getElementById('session-bar').classList.add('show');
-
-  const sResume = document.getElementById('step-resume');
-  const sDocs   = document.getElementById('step-docs');
-  const sDone   = document.getElementById('step-done');
-
-  // Reset
-  [sResume, sDocs, sDone].forEach(s => { s.className = 'sb-step pending'; });
-
-  if (!session.resumeUploaded) {
-    sResume.className = 'sb-step active';
-  } else {
-    sResume.className = 'sb-step done';
-    sResume.innerHTML = '✓ Resume <span class="sb-badge">✓</span>';
-    sDocs.className = 'sb-step active';
-  }
+function queueHasCTCDocs() {
+  const types = queue.map(d => d.detectedType);
+  return types.some(t => ['salary','bank','epfo'].includes(t));
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  ACTION BAR (context-aware nudges)
-// ══════════════════════════════════════════════════════════════════════════════
-function showActionBar(icon, text, btnLabel, cb, showSkip = false) {
-  document.getElementById('ab-icon').textContent = icon;
-  document.getElementById('ab-text').innerHTML   = text;
-  document.getElementById('ab-btn-act').textContent = btnLabel;
-  document.getElementById('ab-btn-skip').style.display = showSkip ? '' : 'none';
-  actionBarAction = cb;
-  document.getElementById('action-bar').classList.add('show');
-}
-function hideActionBar() {
-  document.getElementById('action-bar').classList.remove('show');
-  actionBarAction = null;
-}
-function dismissActionBar() { hideActionBar(); }
-function actionBarClick() { if (actionBarAction) actionBarAction(); hideActionBar(); }
+// ── Priority sorting + doc limit enforcement ───────────────────────────────────
+function prioritizeQueue() {
+  // Build full doc list: resume first, then queue
+  const resumeDoc = session.resumeDoc
+    ? [{ ...session.resumeDoc, detectedType: 'resume' }]
+    : [];
+  const allDocs = [...resumeDoc, ...queue];
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  CTC BAR
-// ══════════════════════════════════════════════════════════════════════════════
-function showCTCBar() { document.getElementById('ctc-bar').classList.add('show'); document.getElementById('ctc-input').focus(); }
-function hideCTCBar() { document.getElementById('ctc-bar').classList.remove('show'); document.getElementById('ctc-input').value=''; }
-function submitCTC() {
-  const val = parseFloat(document.getElementById('ctc-input').value);
-  if (!val || val <= 0) { document.getElementById('ctc-input').style.borderColor='var(--red)'; return; }
-  hideCTCBar();
-  const ctcInRupees = val * 100000;
-  const snap = [...pendingCTCDocs];
-  pendingCTCDocs = [];
-  addMsg('user', `💰 Claimed CTC: ₹${val} LPA`);
-  callAgent(snap, ctcInRupees);
+  // Sort by priority
+  const sorted = allDocs.sort((a, b) => {
+    const pa = DOC_PRIORITY.indexOf(a.detectedType || 'unknown');
+    const pb = DOC_PRIORITY.indexOf(b.detectedType || 'unknown');
+    return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb);
+  });
+
+  const kept = sorted.slice(0, MAX_DOCS);
+  const dropped = sorted.slice(MAX_DOCS);
+  return { kept, dropped };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -522,6 +779,7 @@ async function extractPDF(file) {
     return out.trim().length > 30 ? out.trim() : '[Scanned PDF — no text layer]';
   } catch(e) { return '[PDF error: '+e.message+']'; }
 }
+
 async function extractDOCX(file) {
   try {
     const buf = await file.arrayBuffer();
@@ -530,29 +788,31 @@ async function extractDOCX(file) {
     return xml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,15000);
   } catch(e) { return '[DOCX error: '+e.message+']'; }
 }
+
 async function toBase64(file) {
   return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(file);});
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  HANDLE UPLOADED FILES — the core routing logic
+//  HANDLE UPLOADED FILES — pipeline step: UPLOAD → DETECT → VALIDATE → QUEUE
 // ══════════════════════════════════════════════════════════════════════════════
 async function handleFiles(fileList) {
-  if (busy) return;
-  const files = Array.from(fileList);
+  if (state === STATES.ANALYZING) return; // block during analysis
+
+  const files = Array.from(fileList).filter(f =>
+    f.name.match(/\.(pdf|jpg|jpeg|png|docx|doc)$/i)
+  );
   if (!files.length) return;
 
-  pendingCnt += files.length;
-  updatePending();
-  setStatus('Reading…');
+  if (!session.started) startSession();
+
+  readingCount += files.length;
+  transition(STATES.UPLOADING, { reason: `reading ${files.length} files` });
 
   await Promise.all(files.map(async file => {
-    if (docs.find(d => d.fileName === file.name)) { pendingCnt--; updatePending(); return; }
-    const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
-    renderChip({id, fileName:file.name, type:'unknown', loading:true});
-
-    let text='', b64=null;
-    if (file.type==='application/pdf') {
+    // Step 1: Extract text
+    let text = '', b64 = null;
+    if (file.type === 'application/pdf') {
       text = await extractPDF(file);
     } else if (file.type.startsWith('image/')) {
       b64 = await toBase64(file);
@@ -563,389 +823,318 @@ async function handleFiles(fileList) {
       text = '[unsupported]';
     }
 
+    // Step 2: Detect type
     const dtype = b64 ? 'unknown' : detectType(text, file.name);
-    const doc = {id, fileName:file.name, text, detectedType:dtype};
-    if (b64) { doc.base64Image=b64; doc.imageMediaType=file.type; }
-    docs.push(doc);
-    updateChip(id, dtype);
-    pendingCnt--;
-    updatePending();
+
+    // Step 3: Dedup by content hash
+    const hash = simpleHash(b64 || text);
+    const isDup = session.resumeDoc?.hash === hash ||
+                  queue.some(d => d.hash === hash);
+    if (isDup) {
+      readingCount--;
+      showDupWarning(file.name);
+      return;
+    }
+
+    const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
+    const doc = { id, fileName: file.name, text, detectedType: dtype, hash };
+    if (b64) { doc.base64Image = b64; doc.imageMediaType = file.type; }
+
+    // Step 4: Validate — is it a resume? If no resume yet, only accept resume
+    if (!session.resumeUploaded) {
+      if (dtype === 'resume') {
+        // Accept as session resume
+        session.resumeDoc = doc;
+        session.resumeUploaded = true;
+        persistSession();
+        renderChip({ id, fileName: file.name, type: dtype, isResume: true });
+        addMsg('agent',
+          `✅ **Resume confirmed:** ${file.name}\n\n` +
+          `Upload additional documents (JD, EPFO, salary, bank, offer letter) and click **Analyze** when ready.`
+        );
+        startChat();
+      } else {
+        // BLOCK — not a resume, and no resume yet
+        readingCount--;
+        addMsg('agent',
+          `⛔ **Resume required first.**\n\n` +
+          `Upload the **candidate resume** before adding other documents.\n` +
+          `Document "${file.name}" detected as: **${dtype}** — queued once resume is confirmed.`
+        );
+        // Still show as chip but mark as blocked
+        renderChip({ id, fileName: file.name, type: dtype, blocked: true });
+        return;
+      }
+    } else {
+      // Resume already uploaded — add to queue
+      if (dtype === 'resume') {
+        // Additional resume — add to queue for multi-candidate
+        queue.push(doc);
+        renderChip({ id, fileName: file.name, type: dtype });
+      } else {
+        queue.push(doc);
+        renderChip({ id, fileName: file.name, type: dtype });
+      }
+    }
+
+    readingCount--;
   }));
 
-  document.getElementById('file-in').value='';
-  await routeUploadedDocs();
+  document.getElementById('file-in').value = '';
+
+  // Step 5: After all files processed, advance pipeline state
+  advancePipelineState();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  ROUTING — decides what to do after files are read
-// ══════════════════════════════════════════════════════════════════════════════
-async function routeUploadedDocs() {
-  if (pendingCnt > 0) return; // still reading
-  if (docs.length === 0)      return;
+function showDupWarning(fileName) {
+  // Show inline in chat rather than silently dropping
+  addMsg('agent', `⚠️ **Duplicate skipped:** "${fileName}" — identical content already in queue.`);
+}
 
-  const types = docs.map(d => d.detectedType);
-
-  // ── CASE 1: Resume detected and no resume yet in session ──────────────────
-  const resumeDoc = docs.find(d => d.detectedType === 'resume');
-  if (resumeDoc && !session.resumeUploaded) {
-    // Confirm the resume and remove it from the staging queue
-    docs = docs.filter(d => d.id !== resumeDoc.id);
-    removeChip(resumeDoc.id);
-
-    session.resumeDoc  = { text: resumeDoc.text, fileName: resumeDoc.fileName, id: resumeDoc.id };
-    session.resumeUploaded = true;
-    updateSessionBar();
-
-    if (!session.started) startChat();
-
-    // Run gap analysis on the resume immediately
-    addMsg('user', `📄 Analyze: ${resumeDoc.fileName}`);
-    session.history.push({ role:'user', content:'Resume uploaded: '+resumeDoc.fileName });
-    await callAgent([resumeDoc], null, null); // null = we already added the user msg
-
-    // After analysis — show action-bar nudge for next steps
-    showPostResumeNudge();
-
-    // If other docs were uploaded alongside — process them now
-    if (docs.length > 0) {
-      await routeUploadedDocs();
-    }
+function advancePipelineState() {
+  if (readingCount > 0) {
+    transition(STATES.UPLOADING, { reason: 'still reading' });
     return;
   }
 
-  // ── CASE 2: Resume uploaded but session.resumeDoc already set — treat as
-  //    additional resume (multi-candidate). Keep queued for Analyze button.
-  if (resumeDoc && session.resumeUploaded) {
-    // stays in docs[] for multi-candidate flow — handled by runAnalysis()
-    updatePending();
-    return;
-  }
-
-  // ── CASE 3: No resume yet — block everything and ask for resume first ─────
   if (!session.resumeUploaded) {
-    const nonResume = docs.filter(d => d.detectedType !== 'resume');
-    if (nonResume.length > 0) {
-      addMsg('agent',
-        '⚠️ **Start with the candidate resume first.**\n\n' +
-        'I detected: **' + nonResume.map(d => d.detectedType + ' (' + d.fileName + ')').join(', ') + '**\n\n' +
-        'Please upload the **candidate resume** — once I have it, I\'ll automatically process these documents against it.');
+    transition(STATES.RESUME_NEEDED);
+    return;
+  }
+
+  if (queue.length === 0) {
+    // Only resume in session, no queued docs
+    // Show resume gate has passed, now waiting for more docs or analyze
+    transition(STATES.QUEUED, { reason: 'resume only' });
+    return;
+  }
+
+  // Check if CTC is needed
+  if (queueHasCTCDocs() && !session.claimedCTC) {
+    transition(STATES.CTC_NEEDED);
+    return;
+  }
+
+  transition(STATES.READY);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CTC SUBMISSION
+// ══════════════════════════════════════════════════════════════════════════════
+function submitCTC() {
+  const val = parseFloat(document.getElementById('ctc-input').value);
+  const input = document.getElementById('ctc-input');
+  if (!val || val <= 0) {
+    input.classList.add('invalid');
+    setTimeout(() => input.classList.remove('invalid'), 500);
+    return;
+  }
+  session.claimedCTC = val * 100000;
+  persistSession();
+  addMsg('user', `💰 Claimed CTC: ₹${val} LPA`);
+  document.getElementById('ctc-input').value = '';
+  transition(STATES.READY);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  RUN ANALYSIS — SINGLE combined call, fires ONCE
+// ══════════════════════════════════════════════════════════════════════════════
+async function runAnalysis() {
+  if (state === STATES.ANALYZING) return; // already running
+  if (!session.resumeUploaded) {
+    addMsg('agent', '⛔ **Resume required** before running analysis.');
+    return;
+  }
+
+  // CTC gate
+  if (queueHasCTCDocs() && !session.claimedCTC) {
+    transition(STATES.CTC_NEEDED);
+    return;
+  }
+
+  // Build doc list: resume + queue (priority sorted + limited)
+  const { kept, dropped } = prioritizeQueue();
+
+  if (dropped.length > 0) {
+    addMsg('agent',
+      `⚠️ **Doc limit (${MAX_DOCS} max):** Dropping lowest-priority docs: ${dropped.map(d => d.fileName).join(', ')}\n` +
+      `Analyzing: ${kept.map(d => d.fileName).join(', ')}`
+    );
+  }
+
+  // Truncate each doc
+  const payload = kept.map(doc => ({
+    id: doc.id,
+    fileName: doc.fileName,
+    detectedType: doc.detectedType,
+    text: doc.base64Image ? '' : (doc.text || '').slice(0, DOC_CHAR_LIMITS[doc.detectedType] || 800),
+    ...(doc.base64Image ? { base64Image: doc.base64Image, imageMediaType: doc.imageMediaType } : {}),
+  }));
+
+  const docLabel = payload.map(d => d.fileName).join(', ');
+  addMsg('user', `🔬 Analyze (${payload.length} docs): ${docLabel}`);
+  session.history.push({ role: 'user', content: `Analyze: ${docLabel}` });
+
+  // Clear queue (analysis has started — do not re-trigger)
+  queue = [];
+  document.getElementById('files-row').innerHTML = '';
+
+  // Re-add the resume chip (it stays in session)
+  if (session.resumeDoc) {
+    renderChip({
+      id: session.resumeDoc.id,
+      fileName: session.resumeDoc.fileName,
+      type: 'resume',
+      isResume: true,
+      noRemove: true,
+    });
+  }
+
+  transition(STATES.ANALYZING);
+  addTyping();
+
+  try {
+    const res = await fetch('/.netlify/functions/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        documents: payload,
+        history: session.history.slice(-6),
+        claimedCTC: session.claimedCTC,
+      }),
+    });
+
+    removeTyping();
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '');
+      let errMsg = `Server ${res.status}`;
+      try { errMsg = JSON.parse(errBody).error || errMsg; } catch(e) {}
+
+      if (res.status === 400) {
+        const parsed = JSON.parse(errBody).code;
+        if (parsed === 'RESUME_REQUIRED') {
+          session.resumeUploaded = false;
+          session.resumeDoc = null;
+          persistSession();
+          errMsg = 'Resume validation failed on server. Please re-upload the resume.';
+        }
+      }
+
+      throw new Error(errMsg);
+    }
+
+    const data = await res.json();
+
+    // Handle needs_ctc from server (edge case)
+    if (data.type === 'needs_ctc') {
+      session.claimedCTC = null;
+      // Re-queue the docs
+      queue = kept.filter(d => d.detectedType !== 'resume');
+      kept.filter(d => d.detectedType !== 'resume').forEach(d =>
+        renderChip({ id: d.id, fileName: d.fileName, type: d.detectedType })
+      );
+      transition(STATES.CTC_NEEDED);
+      addMsg('agent', '💰 CTC verification required — enter claimed CTC (LPA) below.');
       return;
     }
-    return;
-  }
 
-  // ── CASE 4: Has resume in session — route each doc type ──────────────────
-  // Separate types
-  const jdDocs      = docs.filter(d => d.detectedType === 'jd');
-  const epfoDocs    = docs.filter(d => d.detectedType === 'epfo');
-  const ctcDocs     = docs.filter(d => ['salary','bank'].includes(d.detectedType));
-  const offerDocs   = docs.filter(d => d.detectedType === 'offer');
-  const otherDocs   = docs.filter(d => !['jd','epfo','salary','bank','offer'].includes(d.detectedType));
-
-  // ── EPFO: auto-combine with session resume ──────────────────────────────
-  if (epfoDocs.length > 0) {
-    const snap = [...epfoDocs];
-    docs = docs.filter(d => !epfoDocs.find(e => e.id === d.id));
-    snap.forEach(d => removeChip(d.id));
-    const resumeAsDoc = { ...session.resumeDoc, detectedType:'resume' };
-    const userMsg = `📜 EPFO Service History uploaded — cross-checking against ${session.resumeDoc.fileName}`;
-    addMsg('user', userMsg);
-    await callAgent([...snap, resumeAsDoc], null, null);
-    hideActionBar();
-    updatePending();
-    return;
-  }
-
-  // ── Offer letter: fire immediately ────────────────────────────────────────
-  if (offerDocs.length > 0) {
-    const snap = [...offerDocs];
-    docs = docs.filter(d => !offerDocs.find(o => o.id === d.id));
-    snap.forEach(d => removeChip(d.id));
-    const userMsg = `📩 Offer Letter — checking authenticity…`;
-    addMsg('user', userMsg);
-    await callAgent(snap, null, null);
-    hideActionBar();
-    updatePending();
-    return;
-  }
-
-  // ── CTC docs (salary/pf/bank): need claimed CTC → show CTC bar ───────────
-  if (ctcDocs.length > 0 || docs.filter(d => d.detectedType === 'epfo').length > 0) {
-    // (epfo handled above; only salary/bank reach here)
-    if (ctcDocs.length > 0) {
-      pendingCTCDocs = [...ctcDocs, { ...session.resumeDoc, detectedType:'resume' }];
-      docs = docs.filter(d => !ctcDocs.find(c => c.id === d.id));
-      ctcDocs.forEach(d => removeChip(d.id));
-      addMsg('agent',
-        '💰 **Salary/bank document(s) detected:** ' + ctcDocs.map(d => d.fileName).join(', ') + '\n\n' +
-        'To verify CTC inflation, enter the candidate\'s **claimed CTC** (LPA) below ↓');
-      showCTCBar();
-      hideActionBar();
-      updatePending();
-      return;
+    if (data.error) {
+      throw new Error(data.error);
     }
+
+    // SUCCESS
+    session.lastResult = data;
+    session.history.push({ role: 'assistant', content: summarize(data) });
+    persistSession();
+
+    addMsg('agent', bub => renderResult(data, bub));
+
+    // Mark pipeline done
+    document.getElementById('ps-output').classList.add('done');
+    document.getElementById('ps-output').innerHTML = '⑥ Output ✓';
+
+    transition(STATES.DONE);
+
+  } catch(err) {
+    removeTyping();
+    lastError = {
+      message: err.message,
+      retryFn: runAnalysis,
+    };
+    // DO NOT clear session, DO NOT proceed
+    addMsg('agent',
+      `🚨 **Analysis failed:** ${err.message}\n\n` +
+      `Session preserved — click **Retry** or try again. No data was lost.`
+    );
+    transition(STATES.ERROR);
   }
-
-  // ── JD docs: match against session resume ─────────────────────────────────
-  if (jdDocs.length > 0) {
-    const snap = [...jdDocs];
-    docs = docs.filter(d => !jdDocs.find(j => j.id === d.id));
-    snap.forEach(d => removeChip(d.id));
-    const resumeAsDoc = { ...session.resumeDoc, detectedType:'resume' };
-    const userMsg = snap.length > 1 ? `📋 JD + ${snap.length} docs — matching against resume…` : `📋 JD uploaded — matching against ${session.resumeDoc.fileName}…`;
-    addMsg('user', userMsg);
-    await callAgent([...snap, resumeAsDoc], null, null);
-    hideActionBar();
-    updatePending();
-    return;
-  }
-
-  // ── Remaining/unknown docs: queue for Analyze button ─────────────────────
-  updatePending();
-}
-
-function showPostResumeNudge() {
-  showActionBar(
-    '💡',
-    '<strong>Resume analyzed.</strong> What next? Upload salary slips, PF, EPFO, offer letter — or paste a <strong>Job Description</strong> below.',
-    'Upload Docs',
-    () => document.getElementById('file-in').click(),
-    true
-  );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  CHAT UI
-// ══════════════════════════════════════════════════════════════════════════════
-function startSession() {
-  document.getElementById('welcome').style.display = 'none';
-  document.getElementById('resume-gate').style.display = '';
-  session.started = true;
-  updateSessionBar();
-}
-
-function startChat() {
-  if (!session.started) {
-    document.getElementById('welcome').style.display = 'none';
-    session.started = true;
-  }
-  document.getElementById('resume-gate').style.display = 'none';
-  document.getElementById('chat-area').style.display = 'flex';
-  document.getElementById('chat-area').style.flexDirection = 'column';
-  document.getElementById('input-bar').style.display = '';
-  document.getElementById('ib-hint').textContent = 'Paste JD · Upload more docs · Ask anything';
-  updateSessionBar();
-}
-
-function showChat() {
-  if (session.started && !document.getElementById('chat-area').style.display?.includes('flex')) {
-    startChat();
-  }
-}
-
-function addMsg(role, content) {
-  showChat();
-  const container = document.getElementById('messages');
-  const row = document.createElement('div');
-  row.className = `msg-row ${role}`;
-  const initials = role==='agent' ? 'P' : 'HR';
-  row.innerHTML = `<div class="av ${role}">${initials}</div><div class="bubble ${role}"></div>`;
-  container.appendChild(row);
-  const bub = row.querySelector('.bubble');
-  if (typeof content === 'string') bub.innerHTML = md(content);
-  else content(bub);
-  document.getElementById('chat-area').scrollTop = 99999;
-  return bub;
-}
-function addTyping() {
-  showChat();
-  const c = document.getElementById('messages');
-  const row = document.createElement('div');
-  row.className = 'typing-row'; row.id = 'typing';
-  row.innerHTML = `<div class="av agent">P</div><div class="typing-bub"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
-  c.appendChild(row);
-  document.getElementById('chat-area').scrollTop = 99999;
-}
-function removeTyping() { const el=document.getElementById('typing'); if(el) el.remove(); }
-function md(t) { return (t||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br/>'); }
-function setStatus(s) { document.getElementById('tb-status').textContent=s; }
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  SEND — handles text input / JD paste
+//  CHAT / TEXT SEND
 // ══════════════════════════════════════════════════════════════════════════════
 function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} }
 function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,112)+'px'; }
 
 async function send() {
-  if (busy) return;
+  if (state === STATES.ANALYZING) return;
   const input = document.getElementById('txt');
   const text  = input.value.trim();
 
-  if (!text && docs.length > 0) { runAnalysis(); return; }
   if (!text) return;
 
-  // ── Resume not yet uploaded? ───────────────────────────────────────────────
+  // Resume not yet uploaded? Block everything
   if (!session.resumeUploaded) {
     input.value = ''; autoResize(input);
     if (!session.started) startSession();
     addMsg('agent',
-      '⚠️ **Please upload the candidate resume first.**\n\n' +
-      'Use the 📎 button to upload the resume — then you can paste the JD or ask anything.');
+      '⛔ **Resume required first.**\n\nUse the 📎 button to upload the candidate resume.');
     return;
   }
 
-  // ── JD pasted as text ─────────────────────────────────────────────────────
+  // JD pasted as text → add to queue (NOT auto-analyze)
   if (looksLikeJD(text)) {
     input.value = ''; autoResize(input);
-    const jdDoc = { id:'jd_'+Date.now(), fileName:'pasted_jd.txt', text, detectedType:'jd' };
-    const resumeAsDoc = { ...session.resumeDoc, detectedType:'resume' };
-    addMsg('user', '📋 JD pasted — matching against resume…');
-    hideActionBar();
-    await callAgent([jdDoc, resumeAsDoc], null, null);
+    const id = 'jd_' + Date.now();
+    const hash = simpleHash(text);
+    const isDup = queue.some(d => d.hash === hash);
+    if (isDup) {
+      addMsg('agent', '⚠️ JD already queued — identical content.');
+      return;
+    }
+    const jdDoc = { id, fileName: 'pasted_jd.txt', text, detectedType: 'jd', hash };
+    queue.push(jdDoc);
+    renderChip({ id, fileName: 'pasted_jd.txt', type: 'jd' });
+    addMsg('agent',
+      '📋 **JD added to queue.** Click **Analyze** when ready to run the full combined analysis.'
+    );
+    advancePipelineState();
     return;
   }
 
-  // ── Normal conversational message ─────────────────────────────────────────
+  // Normal conversational message
   input.value = ''; autoResize(input);
   addMsg('user', text);
-  session.history.push({ role:'user', content:text });
-  busy = true;
+  session.history.push({ role: 'user', content: text });
+
   document.getElementById('send-btn').disabled = true;
   addTyping(); setStatus('Thinking…');
 
   try {
     const res = await fetch('/.netlify/functions/agent', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ message:text, history:session.history.slice(-8), mode:undefined })
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history: session.history.slice(-8) })
     });
     if (!res.ok) throw new Error('Server ' + res.status);
     const data = await res.json();
     removeTyping();
     if (data.error) addMsg('agent', '⚠️ ' + data.error);
-    else { addMsg('agent', data.reply||''); session.history.push({ role:'assistant', content:data.reply||'' }); }
+    else { addMsg('agent', data.reply || ''); session.history.push({ role: 'assistant', content: data.reply || '' }); }
   } catch(e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
 
-  busy = false;
   document.getElementById('send-btn').disabled = false;
   setStatus('Ready');
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  RUN ANALYSIS (manual Analyze button — for multi-candidate or queued docs)
-// ══════════════════════════════════════════════════════════════════════════════
-async function runAnalysis() {
-  if (busy || docs.length === 0 || pendingCnt > 0) return;
-  const snap = [...docs];
-  docs = [];
-  document.getElementById('files-row').innerHTML = '';
-  document.getElementById('pending').classList.remove('show');
-
-  // Always inject session resume into the payload if not already present
-  const hasResume = snap.some(d => d.detectedType === 'resume');
-  const allDocs = hasResume ? snap : [...snap, { ...session.resumeDoc, detectedType:'resume' }];
-
-  const names = snap.map(d => d.fileName).join(', ');
-  addMsg('user', `Analyze ${snap.length} doc${snap.length>1?'s':''}: ${names}`);
-  await callAgent(allDocs, null, null);
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  CORE API CALL
-// ══════════════════════════════════════════════════════════════════════════════
-async function callAgent(docList, claimedCTC, userMsg) {
-  if (busy) return;
-  busy = true;
-  document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = true);
-
-  if (userMsg) addMsg('user', userMsg);
-  session.history.push({ role:'user', content: userMsg || 'analyze' });
-
-  addTyping(); setStatus('Analyzing…');
-
-  try {
-    const payload = docList.map(d => ({
-      id: d.id, fileName: d.fileName,
-      text: d.base64Image ? '' : d.text,
-      detectedType: d.detectedType,
-      ...(d.base64Image ? { base64Image:d.base64Image, imageMediaType:d.imageMediaType } : {})
-    }));
-
-    const res = await fetch('/.netlify/functions/agent', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ documents:payload, history:session.history.slice(-6), claimedCTC, mode:undefined })
-    });
-
-    if (!res.ok) throw new Error('Server ' + res.status);
-    const data = await res.json();
-    removeTyping();
-
-    // ── needs_ctc signal ──────────────────────────────────────────────────
-    if (data.type === 'needs_ctc') {
-      pendingCTCDocs = docList;
-      const docNames = data.detected_docs.map(d=>`${d.fileName} (${d.detectedType})`).join(', ');
-      addMsg('agent', `📂 Detected: **${docNames}**\n\nTo verify CTC, I need the candidate\'s **claimed CTC (LPA)**. Enter it below ↓`);
-      showCTCBar();
-      busy = false;
-      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
-      setStatus('Waiting for CTC…');
-      return;
-    }
-
-    // ── needs_resume_for_epfo — shouldn't fire (we inject resume) but guard ─
-    if (data.type === 'needs_resume_for_epfo') {
-      addMsg('agent', `📋 **EPFO Service History detected** — resume is being injected, retrying…`);
-      busy = false;
-      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
-      setStatus('Ready');
-      return;
-    }
-
-    if (data.error) {
-      addMsg('agent', '⚠️ ' + data.error);
-    } else {
-      addMsg('agent', bub => renderResult(data, bub));
-      session.history.push({ role:'assistant', content: summarize(data) });
-
-      // Post-analysis nudges
-      showPostAnalysisNudge(data);
-
-      // Mark done in session bar if got a proper result
-      if (data.type && data.type !== 'conversation') {
-        document.getElementById('step-docs').className = 'sb-step done';
-        document.getElementById('step-done').className = 'sb-step done';
-        document.getElementById('step-done').textContent = '✓ Results';
-      }
-    }
-  } catch(e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
-
-  busy = false;
-  document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
-  setStatus('Ready');
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-//  POST-ANALYSIS NUDGES
-// ══════════════════════════════════════════════════════════════════════════════
-function showPostAnalysisNudge(data) {
-  const t = data.type || '';
-  if (t === 'employment' && data.mode === 'gap_analysis') {
-    // After gap analysis — ask for JD or financial docs
-    showActionBar('💡',
-      'Gap analysis done. Upload <strong>EPFO/Service History</strong>, or paste a <strong>JD</strong> for skill matching, or upload <strong>salary / PF / bank / offer letter</strong>.',
-      'Upload Docs', () => document.getElementById('file-in').click(), true);
-  } else if (t === 'jd_resume' || t === 'multi_rank') {
-    showActionBar('💡',
-      'Skill match done. Now verify financials — upload <strong>salary slip / PF / bank statement / offer letter</strong>.',
-      'Upload Docs', () => document.getElementById('file-in').click(), true);
-  } else if (t === 'ctc_verification') {
-    showActionBar('💡',
-      'CTC check done. Upload an <strong>offer letter</strong> to verify its authenticity, or paste a <strong>JD</strong> for skill match.',
-      'Upload Docs', () => document.getElementById('file-in').click(), true);
-  } else if (t === 'offer_letter') {
-    showActionBar('💡',
-      'Offer check done. Upload <strong>salary slip / bank statement / PF</strong> to verify claimed CTC.',
-      'Upload Docs', () => document.getElementById('file-in').click(), true);
-  }
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -958,95 +1147,142 @@ const TYPE_UI = {
   unknown:{label:'?',cls:'ct-unknown'}
 };
 
-function renderChip({id, fileName, type, loading}) {
+function renderChip({ id, fileName, type, loading, isResume, blocked, noRemove }) {
   const row = document.getElementById('files-row');
-  const el  = document.createElement('div');
-  el.className = 'chip'; el.id = 'chip_'+id;
+  // Remove existing chip with same id
+  const existing = document.getElementById('chip_' + id);
+  if (existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.className = 'chip' + (isResume ? ' chip-resume' : '') + (blocked ? ' chip-error' : '');
+  el.id = 'chip_' + id;
   const ui = TYPE_UI[type] || TYPE_UI.unknown;
-  el.innerHTML = `<span>📄</span><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fileName}</span><span class="chip-type ${ui.cls}" id="ctype_${id}">${loading?'…':ui.label}</span><span class="chip-x" onclick="removeDoc('${id}')">×</span>`;
+  const removeBtn = (noRemove || isResume) ? '' : `<span class="chip-x" onclick="removeQueuedDoc('${id}')">×</span>`;
+  const blockedMark = blocked ? `<span class="chip-dup">BLOCKED</span>` : '';
+  el.innerHTML = `<span>📄</span><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${fileName}">${fileName}</span><span class="chip-type ${ui.cls}" id="ctype_${id}">${loading?'…':ui.label}</span>${blockedMark}${removeBtn}`;
   row.appendChild(el);
 }
-function updateChip(id, type) {
-  const el=document.getElementById('chip_'+id), t=document.getElementById('ctype_'+id);
-  if(el) el.classList.remove('loading');
-  if(t) { const ui=TYPE_UI[type]||TYPE_UI.unknown; t.className=`chip-type ${ui.cls}`; t.textContent=ui.label; }
-}
-function removeChip(id) { const el=document.getElementById('chip_'+id); if(el) el.remove(); }
-function removeDoc(id) {
-  docs = docs.filter(d => d.id !== id);
-  removeChip(id);
-  updatePending();
+
+function removeQueuedDoc(id) {
+  queue = queue.filter(d => d.id !== id);
+  const el = document.getElementById('chip_' + id);
+  if (el) el.remove();
+  advancePipelineState();
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  PENDING PANEL
+//  SESSION / UI HELPERS
 // ══════════════════════════════════════════════════════════════════════════════
-function updatePending() {
-  const panel = document.getElementById('pending');
-  const info  = document.getElementById('pending-info');
-  const btn   = document.getElementById('analyze-btn');
-  if (docs.length === 0 && pendingCnt === 0) { panel.classList.remove('show'); setStatus('Ready'); return; }
-  panel.classList.add('show');
-  if (pendingCnt > 0) { info.innerHTML=`<strong>Reading ${pendingCnt} file(s)…</strong>`; btn.disabled=true; btn.textContent='Reading…'; return; }
-  const types  = docs.map(d => d.detectedType);
-  const nRes   = types.filter(t=>t==='resume').length;
-  const hasJD  = types.includes('jd');
-  let desc = `<strong>${docs.length} doc${docs.length>1?'s':''} ready</strong>`;
-  if (nRes>1 && hasJD) desc+=' · Multi-candidate ranking';
-  else if (nRes===1 && hasJD) desc+=' · JD vs Resume match';
-  info.innerHTML = desc;
-  btn.disabled = false; btn.textContent = 'Analyze →';
-  setStatus('Ready to analyze');
+function triggerUpload() {
+  if (state === STATES.ANALYZING) return;
+  document.getElementById('file-in').click();
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-//  NEW SESSION
-// ══════════════════════════════════════════════════════════════════════════════
+function startSession() {
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('resume-gate').style.display = '';
+  document.getElementById('input-bar').style.display = '';
+  session.started = true;
+  document.getElementById('pipeline-bar').classList.add('show');
+  transition(STATES.RESUME_NEEDED);
+
+  // If session was restored from localStorage with resume
+  if (session.resumeUploaded && session.resumeDoc) {
+    startChat();
+    renderChip({
+      id: session.resumeDoc.id,
+      fileName: session.resumeDoc.fileName,
+      type: 'resume',
+      isResume: true,
+      noRemove: true,
+    });
+    addMsg('agent',
+      `✅ **Session restored:** Resume "${session.resumeDoc.fileName}" is confirmed.\n\n` +
+      `Upload additional documents and click **Analyze** to run analysis.`
+    );
+    advancePipelineState();
+  }
+}
+
+function startChat() {
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('resume-gate').style.display = 'none';
+  document.getElementById('chat-area').style.display = 'flex';
+  document.getElementById('chat-area').style.flexDirection = 'column';
+  document.getElementById('input-bar').style.display = '';
+  document.getElementById('ib-hint').textContent = 'Paste JD · Upload more docs · Click Analyze when ready';
+}
+
 function newSession() {
-  session = { started:false, resumeUploaded:false, resumeDoc:null, history:[] };
-  docs=[]; busy=false; pendingCnt=0; pendingCTCDocs=[]; pendingEPFODocs=[];
-  actionBarAction=null;
-  document.getElementById('messages').innerHTML='';
-  document.getElementById('chat-area').style.display='none';
-  document.getElementById('welcome').style.display='flex';
-  document.getElementById('resume-gate').style.display='none';
-  document.getElementById('input-bar').style.display='none';
-  document.getElementById('files-row').innerHTML='';
-  document.getElementById('pending').classList.remove('show');
-  document.getElementById('send-btn') && (document.getElementById('send-btn').disabled=false);
-  document.getElementById('txt').value='';
-  hideCTCBar();
-  hideActionBar();
-  document.getElementById('session-bar').classList.remove('show');
-  // Reset step indicators
-  ['step-resume','step-docs','step-done'].forEach(id => {
-    const el=document.getElementById(id); if(el){el.className='sb-step pending';el.textContent=el.id==='step-resume'?'📄 Resume':el.id==='step-docs'?'📂 Documents':'✓ Results';}
-  });
+  state = STATES.IDLE;
+  session = { started: false, resumeUploaded: false, resumeDoc: null, history: [], claimedCTC: null, lastResult: null };
+  queue = []; readingCount = 0; lastError = null;
+  localStorage.removeItem(SESSION_KEY);
+
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('chat-area').style.display = 'none';
+  document.getElementById('welcome').style.display = 'flex';
+  document.getElementById('resume-gate').style.display = 'none';
+  document.getElementById('input-bar').style.display = 'none';
+  document.getElementById('files-row').innerHTML = '';
+  document.getElementById('ctc-section').classList.remove('show');
+  document.getElementById('doc-limit-warn').classList.remove('show');
+  document.getElementById('txt').value = '';
+  document.getElementById('ctc-input').value = '';
+  document.getElementById('pipeline-bar').classList.remove('show');
+  hideStageBanner();
   setStatus('Ready');
+
+  // Reset pipeline steps
+  ['ps-upload','ps-detect','ps-validate','ps-queue','ps-analyze','ps-output'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.className = 'pb-step blocked';
+  });
+  document.getElementById('ps-queue').innerHTML = '④ Queue';
+  document.getElementById('ps-output').innerHTML = '⑥ Output';
+  document.getElementById('status-dot').className = 'tb-dot';
+}
+
+function addMsg(role, content) {
+  const container = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  const initials = role === 'agent' ? 'P' : 'HR';
+  row.innerHTML = `<div class="av ${role}">${initials}</div><div class="bubble ${role}"></div>`;
+  container.appendChild(row);
+  const bub = row.querySelector('.bubble');
+  if (typeof content === 'string') bub.innerHTML = md(content);
+  else content(bub);
+  document.getElementById('chat-area').scrollTop = 99999;
+  return bub;
+}
+
+function addTyping() {
+  const c = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'typing-row'; row.id = 'typing';
+  row.innerHTML = `<div class="av agent">P</div><div class="typing-bub"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  c.appendChild(row);
+  document.getElementById('chat-area').scrollTop = 99999;
+}
+function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
+function md(t) {
+  return (t||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br/>');
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  DRAG & DROP
 // ══════════════════════════════════════════════════════════════════════════════
-document.addEventListener('dragover', e=>{e.preventDefault();document.getElementById('drop-ov').classList.add('show');});
-document.getElementById('drop-ov').addEventListener('dragleave', e=>{
-  if(!e.relatedTarget||!document.getElementById('drop-ov').contains(e.relatedTarget))
+document.addEventListener('dragover', e => { e.preventDefault(); document.getElementById('drop-ov').classList.add('show'); });
+document.getElementById('drop-ov').addEventListener('dragleave', e => {
+  if (!e.relatedTarget || !document.getElementById('drop-ov').contains(e.relatedTarget))
     document.getElementById('drop-ov').classList.remove('show');
 });
-document.addEventListener('drop', e=>{
+document.addEventListener('drop', e => {
   e.preventDefault();
   document.getElementById('drop-ov').classList.remove('show');
   if (!session.started) startSession();
   handleFiles(e.dataTransfer.files);
-});
-
-// Also allow dropping directly onto the resume gate
-document.addEventListener('DOMContentLoaded', () => {
-  const gate = document.getElementById('resume-gate');
-  if (gate) {
-    gate.addEventListener('dragover', e => e.preventDefault());
-    gate.addEventListener('drop', e => { e.preventDefault(); handleFiles(e.dataTransfer.files); });
-  }
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1054,18 +1290,158 @@ document.addEventListener('DOMContentLoaded', () => {
 // ══════════════════════════════════════════════════════════════════════════════
 function renderResult(data, bub) {
   const t = data.type || '';
-  if      (t==='jd_resume')           bub.innerHTML = renderJD(data);
-  else if (t==='multi_rank')          bub.innerHTML = renderMulti(data);
-  else if (t==='offer_letter')        bub.innerHTML = renderOffer(data);
-  else if (t==='offer_salary')        bub.innerHTML = renderOffer(data.offer_check||data)+renderSalary(data.salary_check||{});
-  else if (t==='salary_slip')         bub.innerHTML = renderSalary(data);
-  else if (t==='salary_resume')       bub.innerHTML = renderSalary(data.salary_check||data)+renderEmployment(data.resume_check||{});
-  else if (t==='employment')          bub.innerHTML = renderEmployment(data);
-  else if (t==='jd_only')             bub.innerHTML = renderJDOnly(data);
-  else if (t==='multi_resume_nojd')   bub.innerHTML = renderMultiResumeNoJD(data);
-  else if (t==='ctc_verification')    bub.innerHTML = renderCTCVerification(data);
-  else if (data.scorecard||data.skill_match) bub.innerHTML = renderJD(data);
-  else bub.innerHTML = md(data.reply || JSON.stringify(data,null,2));
+  let html = '';
+
+  if      (t === 'full_analysis')      html = renderFullAnalysis(data);
+  else if (t === 'jd_resume')          html = renderJD(data);
+  else if (t === 'multi_rank')         html = renderMulti(data);
+  else if (t === 'offer_letter')       html = renderOffer(data);
+  else if (t === 'offer_salary')       html = renderOffer(data.offer_check||data) + renderSalary(data.salary_check||{});
+  else if (t === 'employment')         html = renderEmployment(data);
+  else if (t === 'jd_only')            html = renderJDOnly(data);
+  else if (t === 'multi_resume_nojd')  html = renderMultiResumeNoJD(data);
+  else if (t === 'ctc_verification')   html = renderCTCVerification(data);
+  else if (data.scorecard || data.skill_match) html = renderJD(data);
+  else html = md(data.reply || JSON.stringify(data, null, 2));
+
+  // Append dropped docs notice if any
+  if (data._meta?.docs_dropped > 0) {
+    html += `<div style="margin-top:8px;padding:8px 12px;background:var(--amber-dim);border:1px solid rgba(196,124,0,0.2);border-radius:8px;font-size:.72rem;color:var(--amber)">
+      ⚠ ${data._meta.docs_dropped} doc(s) were dropped due to the ${data._meta.docs_analyzed + data._meta.docs_dropped}-doc limit (max ${data._meta.docs_analyzed}).
+    </div>`;
+  }
+
+  bub.innerHTML = html;
+}
+
+// ── NEW: Full unified analysis renderer ───────────────────────────────────────
+function renderFullAnalysis(data) {
+  let h = '<div class="result-section">';
+
+  // Final decision hero
+  const dec = data.final_decision || 'MAYBE';
+  const decCls = dec === 'HIRE' ? 'fd-hire' : dec === 'REJECT' ? 'fd-reject' : 'fd-maybe';
+  const decIcon = dec === 'HIRE' ? '✅' : dec === 'REJECT' ? '❌' : '⚠️';
+  const frisk = (data.fraud_risk || 'MEDIUM').toLowerCase();
+  h += `<div class="final-decision ${decCls}">
+    <div class="fd-icon">${decIcon}</div>
+    <div class="fd-info">
+      <div class="fd-verdict" style="color:${dec==='HIRE'?'var(--green)':dec==='REJECT'?'var(--red)':'var(--amber)'}">${dec}</div>
+      <div class="fd-reason">${data.final_decision_reason || ''}</div>
+    </div>
+    <span class="fraud-badge fraud-${frisk}">Fraud Risk: ${data.fraud_risk || 'MEDIUM'}</span>
+  </div>`;
+
+  // Candidate
+  const cand = data.candidate || {};
+  if (cand.name) {
+    h += `<div style="font-size:.78rem;color:var(--muted2);margin-bottom:10px">
+      Candidate: <strong style="color:var(--text)">${cand.name}</strong>
+      · ${cand.total_experience_years || 0}y exp
+      ${cand.current_role ? `· ${cand.current_role}` : ''}
+    </div>`;
+  }
+
+  // Skill match
+  const sm = data.skill_match || {};
+  if (sm.present && sm.skills?.length) {
+    const pct = sm.match_percentage || 0;
+    const rec = sm.recommendation || 'MAYBE';
+    h += `<div class="rcard"><div class="rcard-head">
+      <span class="rcard-title">📊 Skill Match</span>
+      ${recBadge(rec)}
+    </div><div class="rcard-body">`;
+    h += `<div class="verdict-hero" style="margin-bottom:8px">${scoreRing(pct, scoreColor(pct))}<div class="verdict-info">
+      <div class="verdict-row"><span class="verdict-title">Match Score</span>${recBadge(rec)}</div>
+      <div class="verdict-reason">${sm.recommendation_reason || ''}</div>
+      <div class="verdict-meta">${sm.mandatory_skills_met || 0}/${sm.mandatory_skills_total || 0} mandatory skills met</div>
+    </div></div>`;
+    h += `<table class="skill-table"><thead><tr><th style="text-align:left">Skill</th><th>Required</th><th>Candidate Has</th><th style="min-width:80px">Bar</th><th>Status</th></tr></thead><tbody>`;
+    sm.skills.forEach(s => {
+      const req = s.required_years || 0, actual = s.actual_years || 0;
+      const fp = req > 0 ? Math.min(100, (actual / req) * 100) : actual > 0 ? 100 : 0;
+      const c = s.matched ? 'var(--green)' : actual > 0 ? 'var(--amber)' : 'var(--red)';
+      const badge = s.matched ? 'smb-match' : actual > 0 ? 'smb-partial' : 'smb-miss';
+      const label = s.matched ? '✓ Match' : actual > 0 ? '~ Partial' : '✗ Missing';
+      h += `<tr><td class="skill-name-cell">${s.skill}</td><td class="skill-years">${req?req+'y':'—'}</td><td class="skill-years" style="color:${c};font-weight:600">${actual?actual+'y':'—'}</td><td class="skill-bar-cell"><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${fp}%;background:${c}"></div></div></td><td><span class="skill-match-badge ${badge}">${label}</span></td></tr>`;
+    });
+    h += `</tbody></table></div></div>`;
+  }
+
+  // Gap analysis
+  const ga = data.gap_analysis || {};
+  if (ga.present) {
+    h += `<div class="rcard"><div class="rcard-head">
+      <span class="rcard-title">📅 Employment Timeline</span>
+      ${verdictBadge(ga.verdict)}
+    </div><div class="rcard-body">`;
+    if (ga.gaps?.length) {
+      h += `<div class="check-list">`;
+      ga.gaps.forEach(g => {
+        const st = g.severity === 'SHORT' ? 'PASS' : g.severity === 'MEDIUM' ? 'WARN' : 'FAIL';
+        h += `<div class="check-item">${checkIcon(st)}<span>${g.from_company} → ${g.to_company} (${g.gap_months}mo gap)</span></div>`;
+      });
+      h += `</div>`;
+    } else {
+      h += `<div style="font-size:.78rem;color:var(--green)">✓ No significant employment gaps detected.</div>`;
+    }
+    h += `</div></div>`;
+  }
+
+  // CTC check
+  const ctc = data.ctc_check || {};
+  if (ctc.present) {
+    h += renderCTCVerification(ctc);
+  }
+
+  // EPFO check
+  const epfo = data.epfo_check || {};
+  if (epfo.present) {
+    h += `<div class="rcard"><div class="rcard-head">
+      <span class="rcard-title">📋 EPFO Cross-Check</span>
+      ${verdictBadge(epfo.verdict)}
+    </div><div class="rcard-body">
+      <div style="font-size:.78rem;color:var(--muted2);margin-bottom:6px">${epfo.verdict_reason || ''}</div>
+      ${epfo.inflation_years != null ? `<div style="font-size:.75rem">Experience inflation: <strong style="color:${epfo.inflation_years > 0 ? 'var(--red)' : 'var(--green)'}">${epfo.inflation_years > 0 ? '+' : ''}${epfo.inflation_years}y</strong></div>` : ''}
+    </div></div>`;
+    if (epfo.red_flags?.length) {
+      h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ EPFO Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;
+      epfo.red_flags.forEach(f => { h += `<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`; });
+      h += `</div></div></div>`;
+    }
+  }
+
+  // Offer check
+  const offer = data.offer_check || {};
+  if (offer.present) {
+    h += `<div class="rcard"><div class="rcard-head">
+      <span class="rcard-title">📩 Offer Letter</span>
+      ${verdictBadge(offer.verdict)}
+    </div><div class="rcard-body">
+      <div style="font-size:.78rem;color:var(--muted2)">${offer.verdict_reason || ''}</div>
+      ${offer.overall_score != null ? `<div style="font-size:.72rem;margin-top:4px">Score: <strong>${offer.overall_score}/100</strong></div>` : ''}
+    </div></div>`;
+  }
+
+  // Fraud signals
+  const fraudSignals = data.fraud_signals || [];
+  const positiveSignals = data.positive_signals || [];
+  if (fraudSignals.length || positiveSignals.length) {
+    h += `<div class="sg-grid">`;
+    if (positiveSignals.length) {
+      h += `<div class="sg-card"><div class="sg-head sg-g-head">✓ Positive Signals</div><div class="sg-body">`;
+      positiveSignals.forEach(s => { h += `<div class="sg-item"><span style="color:var(--green);flex-shrink:0">▸</span>${s}</div>`; });
+      h += `</div></div>`;
+    }
+    if (fraudSignals.length) {
+      h += `<div class="sg-card"><div class="sg-head sg-r-head">⚠ Fraud Signals</div><div class="sg-body">`;
+      fraudSignals.forEach(s => { h += `<div class="sg-item"><span style="color:var(--red);flex-shrink:0">▸</span>${s}</div>`; });
+      h += `</div></div>`;
+    }
+    h += `</div>`;
+  }
+
+  return h + '</div>';
 }
 
 function scoreRing(pct,color) {
@@ -1073,14 +1449,14 @@ function scoreRing(pct,color) {
   return `<div class="score-ring-wrap"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg4)" stroke-width="4.5"/><circle cx="32" cy="32" r="28" fill="none" stroke="${color}" stroke-width="4.5" stroke-dasharray="${c}" stroke-dashoffset="${Math.round(c*(1-pct/100))}" stroke-linecap="round"/></svg><div class="score-num" style="color:${color}">${pct}%</div></div>`;
 }
 function recColor(r){return r==='SHORTLIST'?'var(--green)':r==='MAYBE'?'var(--amber)':'var(--red)';}
-function recBadge(r){const cls=r==='SHORTLIST'?'vb-green':r==='MAYBE'?'vb-amber':'vb-red';return `<span class="vbadge ${cls}">${r}</span>`;}
+function recBadge(r){const cls=r==='SHORTLIST'?'vb-green':r==='MAYBE'?'vb-amber':'vb-red';return `<span class="vbadge ${cls}">${r||'?'}</span>`;}
 function scoreColor(s){return s>=70?'var(--green)':s>=45?'var(--amber)':'var(--red)';}
 function verdictBadge(v){
   const u=(v||'').toUpperCase();
-  const green=['AUTHENTIC','GENUINE','VALID','MATCH','CLEAN','SHORTLIST','LOW_RISK','COMPLETE'];
+  const green=['AUTHENTIC','GENUINE','VALID','MATCH','CLEAN','SHORTLIST','LOW_RISK','COMPLETE','HIRE'];
   const amber=['SUSPICIOUS','MAYBE','PARTIAL','GAPS_FOUND','INFLATED','MEDIUM_RISK'];
   const cls=green.includes(u)?'vb-green':amber.includes(u)?'vb-amber':'vb-red';
-  return `<span class="vbadge ${cls}">${v}</span>`;
+  return `<span class="vbadge ${cls}">${v||'?'}</span>`;
 }
 function checkIcon(s){
   const isPass=s==='PASS'||s==='pass',isWarn=s==='WARN'||s==='neutral';
@@ -1090,7 +1466,7 @@ function checkIcon(s){
   return `<svg class="ci-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="${col}" stroke-width="1.2"/><path d="M5.5 5.5l5 5M10.5 5.5l-5 5" stroke="${col}" stroke-width="1.3" stroke-linecap="round"/></svg>`;
 }
 
-// ── JD vs Resume ──────────────────────────────────────────────────────────────
+// ── JD vs Resume ───────────────────────────────────────────────────────────────
 function renderJD(data) {
   if(!data) return '';
   const sc=data.scorecard||{},rec=sc.recommendation||'UNKNOWN',pct=sc.match_percentage||0;
@@ -1100,7 +1476,6 @@ function renderJD(data) {
     JD vs Resume — <strong style="color:var(--text)">${data.candidate?.name||'Candidate'}</strong>
     · ${data.candidate?.total_experience_years||0}y exp
     ${data.candidate?.current_role?`· <span style="color:var(--muted2)">${data.candidate.current_role}</span>`:''}
-    ${data.candidate?.current_company?`@ <span style="color:var(--muted2)">${data.candidate.current_company}</span>`:''}
   </div>
   <div class="verdict-hero">
     ${scoreRing(pct,col)}
@@ -1112,7 +1487,7 @@ function renderJD(data) {
   </div>`;
   const skills=data.skill_match||[];
   if(skills.length){
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Skill Match — Years Breakdown</span><span style="font-size:.65rem;color:var(--muted)">Required vs Candidate has</span></div>
+    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Skill Match</span></div>
     <table class="skill-table"><thead><tr><th style="text-align:left">Skill</th><th>Required</th><th>Candidate Has</th><th style="min-width:80px">Bar</th><th>Status</th><th style="text-align:left;font-size:.6rem">Used At</th></tr></thead><tbody>`;
     skills.forEach(s=>{
       const req=s.required_years||0,actual=s.actual_years||0;
@@ -1120,7 +1495,7 @@ function renderJD(data) {
       const c=s.matched?'var(--green)':actual>0?'var(--amber)':'var(--red)';
       const badge=s.matched?'smb-match':actual>0?'smb-partial':'smb-miss';
       const label=s.matched?'✓ Match':actual>0?'~ Partial':'✗ Missing';
-      h+=`<tr><td class="skill-name-cell">${s.skill}</td><td class="skill-years">${req?req+'y':'—'}</td><td class="skill-years" style="color:${c};font-weight:600">${actual?actual+'y':'—'}</td><td class="skill-bar-cell"><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${fp}%;background:${c}"></div></div></td><td><span class="skill-match-badge ${badge}">${label}</span></td><td style="font-size:.65rem;color:var(--muted2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.used_at||''}</td></tr>`;
+      h+=`<tr><td class="skill-name-cell">${s.skill}</td><td class="skill-years">${req?req+'y':'—'}</td><td class="skill-years" style="color:${c};font-weight:600">${actual?actual+'y':'—'}</td><td class="skill-bar-cell"><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${fp}%;background:${c}"></div></div></td><td><span class="skill-match-badge ${badge}">${label}</span></td><td style="font-size:.65rem;color:var(--muted2)">${s.used_at||''}</td></tr>`;
     });
     h+=`</tbody></table></div>`;
   }
@@ -1134,46 +1509,24 @@ function renderJD(data) {
   return h+'</div>';
 }
 
-// ── Multi-candidate ranking ───────────────────────────────────────────────────
+// ── Multi-candidate ranking ────────────────────────────────────────────────────
 function renderMulti(data) {
   if(!data||!data.candidates) return '';
   const sorted=[...data.candidates].sort((a,b)=>(b.match_percentage||0)-(a.match_percentage||0));
   let h=`<div class="result-section">
-  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">Candidate Ranking — <strong style="color:var(--text)">${sorted.length} candidates</strong> for <strong style="color:var(--amber)">${data.role||'this role'}</strong></div>
+  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">Candidate Ranking — <strong>${sorted.length} candidates</strong> for <strong style="color:var(--amber)">${data.role||'this role'}</strong></div>
   <div class="rcard"><div class="rcard-head"><span class="rcard-title">📊 Candidate Ranking</span></div>
-  <table class="rank-table"><thead><tr><th>#</th><th>Candidate</th><th>Exp</th><th>Role</th><th>Match %</th><th>Skills Met</th><th>Verdict</th><th>Reason</th></tr></thead><tbody>`;
+  <table class="rank-table"><thead><tr><th>#</th><th>Candidate</th><th>Exp</th><th>Match %</th><th>Skills Met</th><th>Verdict</th></tr></thead><tbody>`;
   sorted.forEach((c,i)=>{
     const pct=c.match_percentage||0,col=scoreColor(pct);
     const rnCls=i===0?'rn-1':i===1?'rn-2':i===2?'rn-3':'rn-other';
-    const rec=c.recommendation||'UNKNOWN';
-    h+=`<tr><td><span class="rank-num ${rnCls}">${i+1}</span></td><td style="font-weight:600;color:var(--text)">${c.name||'Unknown'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td style="font-size:.7rem;color:var(--muted2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.current_role||'—'}</td><td><span style="font-family:var(--font-mono);color:${col};font-weight:700;font-size:.85rem">${pct}%</span></td><td class="skill-years">${c.mandatory_met||0}/${c.mandatory_total||0}</td><td>${recBadge(rec)}</td><td style="font-size:.68rem;color:var(--muted2);max-width:160px">${c.recommendation_reason||''}</td></tr>`;
+    h+=`<tr><td><span class="rank-num ${rnCls}">${i+1}</span></td><td style="font-weight:600">${c.name||'Unknown'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td><span style="font-family:var(--font-mono);color:${col};font-weight:700">${pct}%</span></td><td class="skill-years">${c.mandatory_met||0}/${c.mandatory_total||0}</td><td>${recBadge(c.recommendation||'?')}</td></tr>`;
   });
-  h+=`</tbody></table></div>`;
-  const allSkills=[...new Set(sorted.flatMap(c=>(c.skill_match||[]).map(s=>s.skill)))];
-  if(allSkills.length>0){
-    h+=`<div class="rcard" style="margin-top:10px"><div class="rcard-head"><span class="rcard-title">🔥 Skill × Candidate Heatmap</span><span style="font-size:.6rem;color:var(--muted)">Green=Match · Amber=Partial · Red=Missing</span></div><div style="overflow-x:auto"><table class="skill-table" style="min-width:${100+sorted.length*90}px"><thead><tr><th style="text-align:left;min-width:110px">Skill</th>`;
-    sorted.forEach((c,i)=>{const rnCls=i===0?'rn-1':i===1?'rn-2':i===2?'rn-3':'rn-other';h+=`<th style="text-align:center;min-width:80px"><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><span class="rank-num ${rnCls}" style="width:22px;height:22px;font-size:.7rem">${i+1}</span><span style="font-size:.65rem;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${c.name?.split(' ')[0]||'C'+(i+1)}</span></div></th>`;});
-    h+=`</tr></thead><tbody>`;
-    allSkills.forEach(skill=>{
-      let reqYears=null;
-      for(const c of sorted){const sm=(c.skill_match||[]).find(s=>s.skill===skill);if(sm&&sm.required_years!=null){reqYears=sm.required_years;break;}}
-      h+=`<tr><td class="skill-name-cell">${skill}<div style="font-size:.65rem;color:var(--muted);font-family:var(--font-mono)">${reqYears?'req: '+reqYears+'y':'any'}</div></td>`;
-      sorted.forEach(c=>{
-        const sm=(c.skill_match||[]).find(s=>s.skill===skill);
-        const actual=sm?.actual_years||0,matched=sm?.matched||false,hasPartial=!matched&&actual>0;
-        const bg=matched?'rgba(13,115,119,0.1)':hasPartial?'rgba(212,138,0,0.1)':actual===0&&sm?'rgba(214,48,49,0.07)':'transparent';
-        const textCol=matched?'var(--green)':hasPartial?'var(--amber)':'var(--red)';
-        const display=sm?(actual?actual+'y':'—'):'?';
-        h+=`<td style="text-align:center;background:${bg}"><span style="font-family:var(--font-mono);font-size:.75rem;font-weight:600;color:${display==='?'?'var(--muted)':textCol}">${display}</span></td>`;
-      });
-      h+=`</tr>`;
-    });
-    h+=`</tbody></table></div></div>`;
-  }
-  return h+'</div>';
+  h+=`</tbody></table></div></div>`;
+  return h;
 }
 
-// ── Offer letter ──────────────────────────────────────────────────────────────
+// ── Offer letter ───────────────────────────────────────────────────────────────
 function renderOffer(data){
   if(!data) return '';
   const score=data.overall_score||0,verdict=data.verdict||'UNKNOWN',col=scoreColor(score);
@@ -1184,93 +1537,95 @@ function renderOffer(data){
   return h+'</div>';
 }
 
-// ── Salary / CTC ──────────────────────────────────────────────────────────────
+// ── Salary / CTC ───────────────────────────────────────────────────────────────
 function renderSalary(data){
   if(!data) return '';
   const score=data.overall_score||0,verdict=data.verdict||'UNKNOWN',col=scoreColor(score);
   const ctc=data.ctc_inflation||{};
-  let h=`<div class="result-section"><div class="verdict-hero">${scoreRing(score,col)}<div class="verdict-info"><div class="verdict-row"><span class="verdict-title">Salary Slip</span>${verdictBadge(verdict)}</div><div class="verdict-reason">${data.verdict_reason||data.ai_reasoning||''}</div></div></div>`;
-  if(ctc.derived_annual_ctc){const fmt=v=>v?'₹'+(v/100000).toFixed(2)+'L':'—';const iv=ctc.inflation_percent;const ic=Math.abs(iv||0)<=15?'var(--green)':iv>15?'var(--red)':'var(--amber)';h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">CTC Verification</span>${verdictBadge(ctc.verdict)}</div><div class="rcard-body"><div class="ctc-grid"><div class="ctc-item"><div class="ctc-label">Derived CTC</div><div class="ctc-val">${fmt(ctc.derived_annual_ctc)}</div></div><div class="ctc-item"><div class="ctc-label">Claimed CTC</div><div class="ctc-val">${fmt(ctc.claimed_ctc_annual)}</div></div><div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${ic}">${iv!=null?(iv>0?'+':'')+iv+'%':'—'}</div></div><div class="ctc-item"><div class="ctc-label">Verdict</div><div class="ctc-val" style="font-size:.75rem">${ctc.verdict||'—'}</div></div></div></div></div>`;}
+  let h=`<div class="result-section"><div class="verdict-hero">${scoreRing(score,col)}<div class="verdict-info"><div class="verdict-row"><span class="verdict-title">Salary Slip</span>${verdictBadge(verdict)}</div><div class="verdict-reason">${data.verdict_reason||''}</div></div></div>`;
+  if(ctc.derived_annual_ctc){const fmt=v=>v?'₹'+(v/100000).toFixed(2)+'L':'—';const iv=ctc.inflation_percent;const ic=Math.abs(iv||0)<=15?'var(--green)':iv>15?'var(--red)':'var(--amber)';h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">CTC Verification</span>${verdictBadge(ctc.verdict)}</div><div class="rcard-body"><div class="ctc-grid"><div class="ctc-item"><div class="ctc-label">Derived CTC</div><div class="ctc-val">${fmt(ctc.derived_annual_ctc)}</div></div><div class="ctc-item"><div class="ctc-label">Claimed CTC</div><div class="ctc-val">${fmt(ctc.claimed_ctc_annual)}</div></div><div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${ic}">${iv!=null?(iv>0?'+':'')+iv+'%':'—'}</div></div></div></div></div>`;}
   if(data.rule_checks?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Rule Checks</span></div><div class="rcard-body"><div class="check-list">`;data.rule_checks.forEach(c=>{h+=`<div class="check-item">${checkIcon(c.status)}<span>${c.finding}</span></div>`;});h+=`</div></div></div>`;}
   if(data.red_flags?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;data.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div></div>`;}
   return h+'</div>';
 }
 
-// ── Employment / Service history ──────────────────────────────────────────────
+// ── Employment / EPFO ──────────────────────────────────────────────────────────
 function renderEmployment(data){
   if(!data) return '';
   const verdict=data.verdict||'UNKNOWN';
   let h=`<div class="result-section"><div class="rcard"><div class="rcard-head"><span class="rcard-title">Employment Verification</span>${verdictBadge(verdict)}</div><div class="rcard-body"><div style="font-size:.78rem;color:var(--muted2);line-height:1.6">${data.verdict_reason||''}</div>`;
-  if(data.experience_summary){const es=data.experience_summary;h+=`<div class="ctc-grid" style="margin-top:8px"><div class="ctc-item"><div class="ctc-label">Resume Claims</div><div class="ctc-val">${es.resume_total_years||0}y</div></div><div class="ctc-item"><div class="ctc-label">Verified</div><div class="ctc-val">${es.epfo_total_years||es.verified_total_years||0}y</div></div><div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${(es.inflation_years||0)>0?'var(--red)':'var(--green)'}">${es.inflation_years||0}y</div></div></div>`;}
+  if(data.experience_summary){const es=data.experience_summary;h+=`<div class="ctc-grid" style="margin-top:8px"><div class="ctc-item"><div class="ctc-label">Resume Claims</div><div class="ctc-val">${es.resume_total_years||0}y</div></div><div class="ctc-item"><div class="ctc-label">Verified (EPFO)</div><div class="ctc-val">${es.epfo_total_years||0}y</div></div><div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${(es.inflation_years||0)>0?'var(--red)':'var(--green)'}">${es.inflation_years||0}y</div></div></div>`;}
   h+=`</div></div>`;
   if(data.gaps?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Employment Gaps</span></div><div class="rcard-body"><div class="check-list">`;data.gaps.forEach(g=>{const st=g.severity==='SHORT'?'PASS':g.severity==='MEDIUM'?'WARN':'FAIL';h+=`<div class="check-item">${checkIcon(st)}<span>${g.label||(g.from_company+' → '+g.to_company+' ('+g.gap_months+'mo)')}</span></div>`;});h+=`</div></div></div>`;}
   if(data.red_flags?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;data.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div></div>`;}
   return h+'</div>';
 }
 
-// ── JD only ───────────────────────────────────────────────────────────────────
+// ── JD only ────────────────────────────────────────────────────────────────────
 function renderJDOnly(data){
   const s=data.jd_summary||{};
   let h=`<div class="result-section"><div class="rcard"><div class="rcard-head"><span class="rcard-title">JD Parsed</span></div><div class="rcard-body"><div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:4px">${s.role||'Role not detected'}</div><div style="font-size:.75rem;color:var(--muted2)">${s.company?'🏢 '+s.company:''} ${s.ctc_range?'· 💰 '+s.ctc_range:''}</div></div></div>`;
   if(data.required_skills?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Required Skills</span></div><table class="skill-table"><thead><tr><th>Skill</th><th>Type</th><th>Years</th></tr></thead><tbody>`;data.required_skills.forEach(s=>{h+=`<tr><td class="skill-name-cell">${s.skill}</td><td><span class="skill-match-badge ${s.mandatory?'smb-match':'smb-partial'}">${s.mandatory?'Mandatory':'Optional'}</span></td><td class="skill-years">${s.years?s.years+'y':'—'}</td></tr>`;});h+=`</tbody></table></div>`;}
-  h+=`<div class="next-step-card">💡 Upload the candidate's <strong>resume</strong> to run the full skill match scorecard</div>`;
   return h+'</div>';
 }
 
-// ── Multi-resume no JD ────────────────────────────────────────────────────────
+// ── Multi-resume no JD ─────────────────────────────────────────────────────────
 function renderMultiResumeNoJD(data){
   const candidates=data.candidates||[];
-  let h=`<div class="result-section"><div class="next-step-card" style="margin-bottom:10px">💡 <strong>${candidates.length} resumes detected — no JD uploaded.</strong><br/><span style="color:var(--muted2)">Paste or upload a Job Description to rank these candidates.</span></div>
-  <div class="rcard"><div class="rcard-head"><span class="rcard-title">Resume Summary — ${candidates.length} Candidates</span></div><table class="rank-table"><thead><tr><th>#</th><th>Name</th><th>Exp</th><th>Current Role</th><th>Gap Status</th><th>Top Skills</th></tr></thead><tbody>`;
+  let h=`<div class="result-section"><div class="rcard"><div class="rcard-head"><span class="rcard-title">Resume Summary — ${candidates.length} Candidates</span></div><table class="rank-table"><thead><tr><th>#</th><th>Name</th><th>Exp</th><th>Gap Status</th><th>Top Skills</th></tr></thead><tbody>`;
   candidates.forEach((c,i)=>{
     const verdict=c.verdict||'CLEAN',col=verdict==='CLEAN'?'vb-green':'vb-amber';
     const skills=(c.skills_extracted||[]).slice(0,4).map(s=>`${s.skill}(${s.years}y)`).join(', ');
-    h+=`<tr><td><span class="rank-num rn-other" style="width:22px;height:22px;font-size:.72rem">${i+1}</span></td><td style="font-weight:600;color:var(--text)">${c.name||'—'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td style="font-size:.72rem;color:var(--muted2)">${c.current_role||'—'}</td><td><span class="vbadge ${col}" style="font-size:.62rem">${verdict}${c.total_gap_months>0?' · '+c.total_gap_months+'mo gap':''}</span></td><td style="font-size:.7rem;color:var(--muted2)">${skills||'—'}</td></tr>`;
+    h+=`<tr><td><span class="rank-num rn-other" style="width:22px;height:22px;font-size:.72rem">${i+1}</span></td><td style="font-weight:600">${c.name||'—'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td><span class="vbadge ${col}" style="font-size:.62rem">${verdict}${c.total_gap_months>0?' · '+c.total_gap_months+'mo':''}</span></td><td style="font-size:.7rem;color:var(--muted2)">${skills||'—'}</td></tr>`;
   });
   h+=`</tbody></table></div></div>`;
   return h;
 }
 
-// ── CTC Verification ──────────────────────────────────────────────────────────
+// ── CTC Verification ───────────────────────────────────────────────────────────
 function renderCTCVerification(data){
   if(!data) return '';
   const overallBadge=data.overall_verdict==='GENUINE'?'vb-green':data.overall_verdict==='SUSPICIOUS'?'vb-amber':'vb-red';
   const infClass=v=>v==='NORMAL'?'inf-normal':v==='INFLATED'?'inf-inflated':'inf-high';
   const pctStr=p=>p!=null?(p>0?'+':'')+p.toFixed(1)+'%':'—';
 
-  let h=`<div class="result-section"><div class="verdict-hero"><div class="verdict-info"><div class="verdict-row"><span class="verdict-title">CTC Verification</span><span class="vbadge ${overallBadge}">${data.overall_verdict}</span><span class="vbadge" style="background:var(--bg3);color:var(--muted2);border-color:var(--border)">${data.confidence} confidence</span></div><div class="verdict-reason">${data.overall_verdict_reason||''}</div><div class="verdict-meta">Claimed: <strong style="color:var(--text)">₹${data.claimed_ctc_lpa?.toFixed(2)||(data.claimed_ctc/100000).toFixed(2)} LPA</strong> &nbsp;·&nbsp; Sources: ${(data.sources_used||[]).join(' + ')||'—'}</div></div></div>`;
+  let h=`<div class="result-section"><div class="verdict-hero"><div class="verdict-info"><div class="verdict-row"><span class="verdict-title">CTC Verification</span><span class="vbadge ${overallBadge}">${data.overall_verdict}</span><span class="vbadge" style="background:var(--bg3);color:var(--muted2);border-color:var(--border)">${data.confidence||'?'} confidence</span></div><div class="verdict-reason">${data.overall_verdict_reason||''}</div><div class="verdict-meta">Claimed: <strong>₹${data.claimed_ctc_lpa?.toFixed(2)||(data.claimed_ctc/100000)?.toFixed(2)||'?'} LPA</strong> · Sources: ${(data.sources_used||[]).join(' + ')||'—'}</div></div></div>`;
 
   if(data.salary_slip?.present){
-    const s=data.salary_slip;
-    const sBadge=s.verdict==='GENUINE'?'vb-green':s.verdict==='SUSPICIOUS'?'vb-amber':'vb-red';
-    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📄 Salary Slip</span><span class="vbadge ${sBadge}" style="font-size:.62rem">${s.verdict||'—'} · ${s.overall_score!=null?s.overall_score+'/100':'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Gross/month</div><div class="ctc-stat-val">₹${s.extracted?.gross?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${s.derived_annual_ctc?(s.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(s.inflation_verdict)}">${pctStr(s.inflation_percent)} <span style="font-size:.65rem">${s.inflation_verdict||''}</span></div></div></div>`;
-    if(s.rule_checks?.length){h+=`<div class="check-list">`;s.rule_checks.slice(0,5).forEach(c=>{h+=`<div class="check-item">${checkIcon(c.status==='pass'?'PASS':c.status==='neutral'?'WARN':'FAIL')}<span>${c.name}: <span style="color:var(--muted2)">${c.finding}</span></span></div>`;});h+=`</div>`;}
-    if(s.red_flags?.length){h+=`<div style="margin-top:8px"><div class="flag-list">`;s.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div>`;}
-    h+=`</div></div>`;
+    const s=data.salary_slip;const sBadge=s.verdict==='GENUINE'?'vb-green':s.verdict==='SUSPICIOUS'?'vb-amber':'vb-red';
+    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📄 Salary Slip</span><span class="vbadge ${sBadge}" style="font-size:.62rem">${s.verdict||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Gross/month</div><div class="ctc-stat-val">₹${s.extracted?.gross?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${s.derived_annual_ctc?(s.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(s.inflation_verdict)}">${pctStr(s.inflation_percent)}</div></div></div></div></div>`;
   }
   if(data.pf_analysis?.present){
     const p=data.pf_analysis;
-    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📋 PF History</span><span class="vbadge ${p.consistency==='CONSISTENT'?'vb-green':p.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${p.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Avg PF/month</div><div class="ctc-stat-val">₹${p.avg_pf_monthly?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Basic</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_basic?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_annual_ctc?(p.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div></div><div class="ctc-stat-row" style="margin-top:-2px"><div class="ctc-stat" style="grid-column:1/3"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(p.inflation_verdict)}">${pctStr(p.inflation_percent)} <span style="font-size:.65rem">${p.inflation_verdict||''}</span></div></div><div class="ctc-stat"><div class="ctc-stat-label">Entries</div><div class="ctc-stat-val" style="color:var(--muted2)">${p.pf_amounts?.length||0} months</div></div></div>${p.note?`<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${p.note}</div>`:''}</div></div>`;
+    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📋 PF History</span><span class="vbadge ${p.consistency==='CONSISTENT'?'vb-green':p.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${p.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Avg PF/month</div><div class="ctc-stat-val">₹${p.avg_pf_monthly?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_annual_ctc?(p.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(p.inflation_verdict)}">${pctStr(p.inflation_percent)}</div></div></div></div></div>`;
   }
   if(data.bank_analysis?.present){
     const b=data.bank_analysis;
-    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">🏦 Bank Statement</span><span class="vbadge ${b.consistency==='CONSISTENT'?'vb-green':b.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${b.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Credits found</div><div class="ctc-stat-val">${b.credits_found||0} months</div></div><div class="ctc-stat"><div class="ctc-stat-label">Avg Monthly</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.avg_monthly_credit?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.derived_annual_ctc?(b.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div></div><div class="ctc-stat-row" style="margin-top:-2px"><div class="ctc-stat" style="grid-column:1/-1"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(b.inflation_verdict)}">${pctStr(b.inflation_percent)} <span style="font-size:.65rem">${b.inflation_verdict||''}</span></div></div></div>${b.note?`<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${b.note}</div>`:''}</div></div>`;
+    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">🏦 Bank Statement</span><span class="vbadge ${b.consistency==='CONSISTENT'?'vb-green':b.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${b.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Credits found</div><div class="ctc-stat-val">${b.credits_found||0} months</div></div><div class="ctc-stat"><div class="ctc-stat-label">Avg Monthly</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.avg_monthly_credit?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(b.inflation_verdict)}">${pctStr(b.inflation_percent)}</div></div></div></div></div>`;
   }
   if(data.red_flags?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;data.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div></div>`;}
   if(data.positive_signals?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">✓ Positive Signals</span></div><div class="rcard-body"><div class="flag-list">`;data.positive_signals.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-green"></div>${f}</div>`;});h+=`</div></div></div>`;}
   return h+'</div>';
 }
 
-// ── Summarize for history ─────────────────────────────────────────────────────
-function summarize(data){
-  const t=data.type||'';
-  if(t==='jd_resume')        return `[JD Match] ${data.candidate?.name||'?'}: ${data.scorecard?.match_percentage||0}% — ${data.scorecard?.recommendation||'?'}`;
-  if(t==='multi_rank')       return `[Ranking] ${data.candidates?.length||0} candidates ranked`;
-  if(t==='offer_letter')     return `[Offer] ${data.verdict} (${data.overall_score}/100)`;
-  if(t==='salary_slip')      return `[Salary] ${data.verdict} — CTC inflation: ${data.ctc_inflation?.verdict||'N/A'}`;
-  if(t==='employment')       return `[Employment] ${data.verdict} — ${data.verdict_reason||''}`;
-  if(t==='ctc_verification') return `[CTC Check] ${data.overall_verdict} (${data.claimed_ctc_lpa?.toFixed(1)||'?'} LPA claimed) — ${data.confidence} confidence`;
+// ── Summarize for history ──────────────────────────────────────────────────────
+function summarize(data) {
+  const t = data.type || '';
+  if (t === 'full_analysis') return `[Full Analysis] ${data.final_decision || '?'}: ${data.final_decision_reason || ''}`;
+  if (t === 'jd_resume')     return `[JD Match] ${data.candidate?.name||'?'}: ${data.scorecard?.match_percentage||0}% — ${data.scorecard?.recommendation||'?'}`;
+  if (t === 'multi_rank')    return `[Ranking] ${data.candidates?.length||0} candidates`;
+  if (t === 'offer_letter')  return `[Offer] ${data.verdict} (${data.overall_score}/100)`;
+  if (t === 'employment')    return `[Employment] ${data.verdict} — ${data.verdict_reason||''}`;
+  if (t === 'ctc_verification') return `[CTC Check] ${data.overall_verdict} (${data.claimed_ctc_lpa?.toFixed(1)||'?'} LPA)`;
   return '[Analysis complete]';
+}
+
+// ── Boot: restore session if available ────────────────────────────────────────
+if (session.resumeUploaded && session.resumeDoc) {
+  // Auto-start session on load if resume was saved
+  window.addEventListener('DOMContentLoaded', () => {
+    startSession();
+  });
 }
 </script>
 </body>
