@@ -921,32 +921,124 @@ function salaryHTML(data) {
 
 function jdHTML(data) {
   if (!data) return '';
-  const sc = data.scorecard || {}, rec = sc.recommendation || 'UNKNOWN', pct = sc.match_percentage || 0;
-  let html = `<div style="margin-bottom:7px;font-size:.82rem;color:var(--muted2);">JD vs Resume — <strong>${data.candidate?.name || 'Candidate'}</strong></div><div class="result-wrap">
-  <div class="r-card"><div class="r-card-header"><span class="r-card-title">Recommendation</span><span class="verdict-badge ${verdictClass(rec)}">${rec}</span></div>
-  <div class="r-card-body"><div class="score-wrap"><div class="score-circle ${scoreClass(pct)}">${pct}%</div>
-  <div class="score-reason">${sc.recommendation_reason || ''}<br/><span style="font-size:.72rem;color:var(--muted);">${sc.mandatory_skills_met||0}/${sc.mandatory_skills_total||0} mandatory · ${data.candidate?.total_experience_years||0} yrs</span></div></div></div></div>`;
-  if (data.skill_match?.length) {
-    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Skill Match</span></div><div class="r-card-body"><div class="skill-grid">`;
-    data.skill_match.forEach(s => {
-      const req = s.required_years||0, actual = s.actual_years||0;
-      const fillPct = req > 0 ? Math.min(100,(actual/req)*100) : actual > 0 ? 100 : 0;
-      const col = s.matched ? '#34c76e' : actual > 0 ? '#f59332' : '#ef4444';
-      html += `<div class="skill-row"><span class="skill-name">${s.skill}</span><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${fillPct}%;background:${col};"></div></div><span class="skill-status" style="color:${col};">${actual}y</span></div>`;
+  const sc  = data.scorecard || {};
+  const rec = sc.recommendation || 'UNKNOWN';
+  const pct = sc.match_percentage || 0;
+
+  // Verdict color
+  const recColor = rec === 'SHORTLIST' ? '#4ade80' : rec === 'MAYBE' ? '#fbbf24' : '#f87171';
+  const recBg    = rec === 'SHORTLIST' ? 'rgba(38,160,88,0.12)' : rec === 'MAYBE' ? 'rgba(232,119,34,0.12)' : 'rgba(192,57,43,0.12)';
+  const recBorder= rec === 'SHORTLIST' ? 'rgba(38,160,88,0.3)' : rec === 'MAYBE' ? 'rgba(232,119,34,0.3)' : 'rgba(192,57,43,0.3)';
+
+  // Score ring color
+  const ringColor = pct >= 70 ? '#4ade80' : pct >= 45 ? '#fbbf24' : '#f87171';
+
+  // ── Header verdict card ───────────────────────────────────────────────────
+  let html = `
+  <div style="margin-bottom:10px;font-size:.82rem;color:var(--muted2);">
+    JD vs Resume — <strong style="color:var(--text)">${data.candidate?.name || 'Candidate'}</strong>
+    &nbsp;·&nbsp; ${data.candidate?.total_experience_years || 0} yrs exp
+  </div>
+
+  <div style="background:var(--bg1);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:16px;">
+    <!-- Score ring -->
+    <div style="position:relative;width:72px;height:72px;flex-shrink:0;">
+      <svg viewBox="0 0 72 72" style="width:72px;height:72px;transform:rotate(-90deg)">
+        <circle cx="36" cy="36" r="30" fill="none" stroke="var(--bg3)" stroke-width="5"/>
+        <circle cx="36" cy="36" r="30" fill="none" stroke="${ringColor}" stroke-width="5"
+          stroke-dasharray="${Math.round(2*Math.PI*30)}"
+          stroke-dashoffset="${Math.round(2*Math.PI*30*(1-pct/100))}"
+          stroke-linecap="round"/>
+      </svg>
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:1.1rem;font-weight:700;color:${ringColor}">${pct}%</div>
+    </div>
+    <!-- Verdict -->
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span style="font-family:var(--font-head);font-size:1rem;font-weight:700;color:var(--text)">Match Score</span>
+        <span style="padding:3px 12px;border-radius:20px;font-size:.75rem;font-weight:700;letter-spacing:.05em;background:${recBg};color:${recColor};border:1px solid ${recBorder}">${rec}</span>
+      </div>
+      <div style="font-size:.8rem;color:var(--muted2);line-height:1.5">${sc.recommendation_reason || ''}</div>
+      <div style="margin-top:6px;font-size:.72rem;color:var(--muted)">
+        ${sc.mandatory_skills_met || 0}/${sc.mandatory_skills_total || 0} mandatory skills met
+      </div>
+    </div>
+  </div>`;
+
+  // ── Skill match table ─────────────────────────────────────────────────────
+  const skills = data.skill_match || [];
+  if (skills.length) {
+    html += `
+  <div style="background:var(--bg1);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:10px;">
+    <div style="padding:9px 14px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted2);font-family:var(--font-head)">
+      Skill Match
+    </div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border)">
+          <th style="padding:8px 14px;text-align:left;font-size:.68rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em">Skill</th>
+          <th style="padding:8px 10px;text-align:center;font-size:.68rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em">Required</th>
+          <th style="padding:8px 10px;text-align:center;font-size:.68rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em">Candidate</th>
+          <th style="padding:8px 14px;text-align:center;font-size:.68rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em">Status</th>
+        </tr>
+      </thead>
+      <tbody>`;
+
+    skills.forEach((s, idx) => {
+      const matched   = s.matched;
+      const hasPartial= !matched && (s.actual_years || 0) > 0;
+      const statusColor  = matched ? '#4ade80' : hasPartial ? '#fbbf24' : '#f87171';
+      const statusLabel  = matched ? '✓ Match' : hasPartial ? '~ Partial' : '✗ Missing';
+      const statusBg     = matched ? 'rgba(38,160,88,0.1)' : hasPartial ? 'rgba(232,119,34,0.1)' : 'rgba(192,57,43,0.08)';
+      const rowBg        = idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.015)';
+
+      html += `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.04);background:${rowBg}">
+          <td style="padding:9px 14px;font-size:.8rem;color:var(--text);font-weight:${matched?'500':'400'}">${s.skill}</td>
+          <td style="padding:9px 10px;text-align:center;font-size:.78rem;color:var(--muted2)">${s.required_years ? s.required_years+'y' : '—'}</td>
+          <td style="padding:9px 10px;text-align:center;font-size:.78rem;color:${statusColor};font-weight:500">${(s.actual_years||0) > 0 ? s.actual_years+'y' : '—'}</td>
+          <td style="padding:9px 14px;text-align:center">
+            <span style="font-size:.68rem;font-weight:600;padding:2px 9px;border-radius:12px;background:${statusBg};color:${statusColor}">${statusLabel}</span>
+          </td>
+        </tr>`;
     });
-    html += `</div></div></div>`;
+
+    html += `</tbody></table></div>`;
   }
-  if (sc.gaps?.length) {
-    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Skill Gaps</span></div><div class="r-card-body"><div class="flag-list">`;
-    sc.gaps.forEach(g => { html += `<div class="flag-item2"><div class="fi-dot fi-red"></div><span>${g}</span></div>`; });
-    html += `</div></div></div>`;
+
+  // ── Strengths & Gaps side by side ─────────────────────────────────────────
+  const strengths = sc.strengths || [];
+  const gaps      = sc.gaps || [];
+
+  if (strengths.length || gaps.length) {
+    html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">`;
+
+    if (strengths.length) {
+      html += `
+      <div style="background:var(--bg1);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="padding:8px 12px;background:rgba(38,160,88,0.06);border-bottom:1px solid rgba(38,160,88,0.15);font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#4ade80;font-family:var(--font-head)">✓ Strengths</div>
+        <div style="padding:10px 12px;display:flex;flex-direction:column;gap:5px;">`;
+      strengths.forEach(s => {
+        html += `<div style="font-size:.76rem;color:var(--muted2);display:flex;gap:6px;align-items:flex-start"><span style="color:#4ade80;margin-top:1px;flex-shrink:0">▸</span>${s}</div>`;
+      });
+      html += `</div></div>`;
+    }
+
+    if (gaps.length) {
+      html += `
+      <div style="background:var(--bg1);border:1px solid var(--border);border-radius:12px;overflow:hidden;">
+        <div style="padding:8px 12px;background:rgba(192,57,43,0.06);border-bottom:1px solid rgba(192,57,43,0.15);font-size:.68rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#f87171;font-family:var(--font-head)">✗ Gaps</div>
+        <div style="padding:10px 12px;display:flex;flex-direction:column;gap:5px;">`;
+      gaps.forEach(g => {
+        html += `<div style="font-size:.76rem;color:var(--muted2);display:flex;gap:6px;align-items:flex-start"><span style="color:#f87171;margin-top:1px;flex-shrink:0">▸</span>${g}</div>`;
+      });
+      html += `</div></div>`;
+    }
+
+    html += `</div>`;
   }
-  if (sc.strengths?.length) {
-    html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Strengths</span></div><div class="r-card-body"><div class="signal-list">`;
-    sc.strengths.forEach(s => { html += `<div class="flag-item2"><div class="fi-dot fi-green"></div><span>${s}</span></div>`; });
-    html += `</div></div></div>`;
-  }
-  return html + '</div>';
+
+  return html;
 }
 
 function employmentHTML(data) {
