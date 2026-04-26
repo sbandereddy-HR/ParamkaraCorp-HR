@@ -1,5 +1,5 @@
-// ParamkaraCorp-HR Agent — Complete rewrite
-// Features: JD vs Resume, Multi-candidate ranking, Offer letter, CTC verification, Service history
+// ParamkaraCorp-HR Agent — v2 (fixed skill extraction + multi-rank)
+// Fixes: skill years from date ranges, full candidate skill tables, longer text slices
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL        = "llama-3.3-70b-versatile";
@@ -11,7 +11,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-async function groq(messages, json = false, maxTokens = 3000) {
+async function groq(messages, json = false, maxTokens = 4000) {
   const body = { model: MODEL, messages, temperature: 0.05, max_tokens: maxTokens };
   if (json) body.response_format = { type: "json_object" };
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -96,14 +96,13 @@ function routeMode(documents, modeHint) {
   const has = t => types.includes(t);
   const count = t => types.filter(x => x === t).length;
 
-  const hasJD     = has("jd");
-  const numResumes= count("resume");
-  const hasOffer  = has("offer");
-  const hasSalary = has("salary");
-  const hasEPFO   = has("epfo");
-  const hasBank   = has("bank");
+  const hasJD      = has("jd");
+  const numResumes = count("resume");
+  const hasOffer   = has("offer");
+  const hasSalary  = has("salary");
+  const hasEPFO    = has("epfo");
+  const hasBank    = has("bank");
 
-  // Multi-candidate ranking: JD + 2+ resumes
   if (hasJD && numResumes >= 2) return "multi_rank";
   if (hasJD && numResumes === 1) return "jd_resume";
   if (hasJD) return "jd_only";
@@ -119,7 +118,6 @@ function routeMode(documents, modeHint) {
 
 // ── Build system prompts ──────────────────────────────────────────────────────
 function buildPrompt(documents, claimedCTC, modeHint) {
-  // Ensure types detected
   for (const doc of documents) {
     if (!doc.detectedType || doc.detectedType === "unknown")
       doc.detectedType = detectType(doc.text || "", doc.fileName || "");
@@ -153,7 +151,7 @@ function buildPrompt(documents, claimedCTC, modeHint) {
     const pfExp = basic ? basic * 0.12 : null;
     const pfOk  = pf && pfExp ? (pf === 1800 || Math.abs(pf-pfExp) <= Math.max(50,pfExp*0.01)) : null;
     const netOk = gross&&ded&&net ? Math.abs(net-(gross-ded)) <= Math.max(10,gross*0.002) : null;
-    validatorCtx += `SALARY VALIDATORS:\nGross=₹${gross||"?"} Basic=₹${basic||"?"} PF=₹${pf||"?"} (exp=₹${pfExp?.toFixed(0)||"?"}) PF_OK:${pfOk??'?'}\nNet math: ${netOk??'?'?'VALID':'MISMATCH—tampering possible'}\n`;
+    validatorCtx += `SALARY VALIDATORS:\nGross=₹${gross||"?"} Basic=₹${basic||"?"} PF=₹${pf||"?"} (exp=₹${pfExp?.toFixed(0)||"?"}) PF_OK:${pfOk??'?'}\nNet math: ${netOk==null?'?':netOk?'VALID':'MISMATCH—tampering possible'}\n`;
     if (effectiveCTC && gross) {
       const empPF = basic ? Math.min(basic*0.12,1800) : 1800;
       const grat  = basic ? basic*0.0481 : 0;
@@ -164,27 +162,41 @@ function buildPrompt(documents, claimedCTC, modeHint) {
     }
   }
 
-  // Build doc sections
-  const docSections = documents.map((d,i) => {
+  // ── Build doc sections — INCREASED slice to 7000 for resumes ──────────────
+  const docSections = documents.map((d, i) => {
     const label = (d.detectedType||"unknown").toUpperCase();
     if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE]`;
-    return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"").slice(0,4000)}`;
+    // Give resumes more context so skills + dates can be fully parsed
+    const limit = (d.detectedType === "resume") ? 7000 : 4000;
+    return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"").slice(0, limit)}`;
   }).join("\n\n");
 
   const schema = SCHEMAS[analysisMode] || SCHEMAS.unknown_docs;
 
+  // ── FIXED: rules no longer kill skill arrays; added explicit years extraction instructions
   const system = `You are ParamkaraCorp-HR, expert Indian HR fraud detection and recruitment AI.
 Analysis mode: ${analysisMode.toUpperCase()}
 ${validatorCtx}
-STRICT RULES — NO EXCEPTIONS:
+STRICT RULES:
 1. Output ONLY valid JSON. Zero prose, zero markdown, zero text outside JSON.
-2. All string values MAX 20 words. No paragraphs inside JSON strings.
-3. verdict_reason, recommendation_reason: ONE short sentence only.
-4. strengths/gaps arrays: max 4 items, max 6 words each.
+2. verdict_reason, recommendation_reason: ONE short sentence (max 20 words).
+3. strengths/gaps arrays: max 4 items, max 8 words each.
+4. skill names: use exact name from JD or resume, keep concise.
 5. NEVER reproduce document text verbatim.
 6. Use pre-computed validator values exactly as given.
 7. Indian PF ceiling: ₹1800/month (basic cap ₹15000). GST since July 2017.
-8. Scores 0-100: 80+=PASS, 55-79=WARN, <55=FAIL.
+8. Scores 0-100: 80+=SHORTLIST, 55-79=MAYBE, <55=REJECT.
+
+HOW TO COMPUTE actual_years PER SKILL:
+- Read ALL company entries in the resume: company name, start date, end date (or "Present").
+- For each role, identify which skills/tools were used based on job title and description.
+- Compute duration: (end_year - start_year) + (end_month - start_month)/12. Round to 1 decimal.
+- Sum durations across all roles where that skill was used → that is actual_years.
+- If a skill is listed in Skills section but no role mentions it, use 0.5 as a conservative estimate.
+- If resume has no dates, use total_experience_years divided by skill count as fallback.
+- DO NOT leave actual_years as 0 if the candidate clearly has the skill — estimate from context.
+- required_years: extract from JD (e.g. "5+ years of Python" → 5). null if JD doesn't specify.
+- matched: true if actual_years >= required_years (or actual_years > 0 when required_years is null).
 
 REQUIRED JSON SCHEMA:
 ${schema}`;
@@ -194,10 +206,25 @@ ${schema}`;
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 const SCHEMAS = {
+
+  // ── JD vs Single Resume ───────────────────────────────────────────────────
   jd_resume: `{
   "type": "jd_resume",
-  "candidate": {"name": "string", "total_experience_years": number},
-  "skill_match": [{"skill": "string", "required_years": number|null, "actual_years": number, "matched": boolean}],
+  "candidate": {
+    "name": "string",
+    "total_experience_years": number,
+    "current_role": "string",
+    "current_company": "string"
+  },
+  "skill_match": [
+    {
+      "skill": "string",
+      "required_years": number|null,
+      "actual_years": number,
+      "matched": boolean,
+      "used_at": "company1, company2"
+    }
+  ],
   "scorecard": {
     "match_percentage": number,
     "mandatory_skills_met": number,
@@ -209,18 +236,30 @@ const SCHEMAS = {
   }
 }`,
 
+  // ── Multi-candidate ranking (JD + 2+ resumes) ────────────────────────────
   multi_rank: `{
   "type": "multi_rank",
   "role": "string",
+  "jd_skills": ["skill1", "skill2"],
   "candidates": [
     {
       "name": "string",
-      "experience_years": number,
+      "total_experience_years": number,
+      "current_role": "string",
       "match_percentage": number,
       "mandatory_met": number,
       "mandatory_total": number,
       "recommendation": "SHORTLIST"|"MAYBE"|"REJECT",
-      "skill_match": [{"skill": "string", "required_years": number|null, "actual_years": number, "matched": boolean}]
+      "recommendation_reason": "string",
+      "skill_match": [
+        {
+          "skill": "string",
+          "required_years": number|null,
+          "actual_years": number,
+          "matched": boolean,
+          "used_at": "company1, company2"
+        }
+      ]
     }
   ]
 }`,
@@ -391,7 +430,7 @@ exports.handler = async (event) => {
           blocks.push({ type: "image_url", image_url: { url: `data:${doc.imageMediaType};base64,${doc.base64Image}` } });
           blocks.push({ type: "text", text: `Image: ${doc.fileName}` });
         } else if (doc.text) {
-          blocks.push({ type: "text", text: `--- ${doc.fileName} [${doc.detectedType}] ---\n${doc.text.slice(0,3000)}` });
+          blocks.push({ type: "text", text: `--- ${doc.fileName} [${doc.detectedType}] ---\n${doc.text.slice(0,4000)}` });
         }
       }
       blocks.push({ type: "text", text: `\nReturn JSON per schema:\n${system.split("REQUIRED JSON SCHEMA:")[1]||""}` });
@@ -399,10 +438,10 @@ exports.handler = async (event) => {
       const vRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ model: VISION_MODEL, messages: [{ role: "system", content: system }, { role: "user", content: blocks }], temperature: 0.05, max_tokens: 2000, response_format: { type: "json_object" } }),
+        body: JSON.stringify({ model: VISION_MODEL, messages: [{ role: "system", content: system }, { role: "user", content: blocks }], temperature: 0.05, max_tokens: 3000, response_format: { type: "json_object" } }),
       });
       if (!vRes.ok) {
-        result = await groq([{ role: "system", content: system }, { role: "user", content: "[Image]\n" + userPrompt }], true, 2000);
+        result = await groq([{ role: "system", content: system }, { role: "user", content: "[Image]\n" + userPrompt }], true, 3000);
       } else {
         const vd = await vRes.json();
         const ct = vd.choices?.[0]?.message?.content ?? "{}";
@@ -410,7 +449,10 @@ exports.handler = async (event) => {
         result = m ? JSON.parse(m[0]) : JSON.parse(ct);
       }
     } else {
-      result = await groq([{ role: "system", content: system }, { role: "user", content: userPrompt }], true, 3000);
+      // For multi_rank with many resumes, bump token limit so all candidates fit
+      const isMulti = analysisMode === "multi_rank";
+      const tokenLimit = isMulti ? 6000 : 4000;
+      result = await groq([{ role: "system", content: system }, { role: "user", content: userPrompt }], true, tokenLimit);
     }
 
     if (!result.type) result.type = analysisMode;
