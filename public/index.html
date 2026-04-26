@@ -1048,7 +1048,8 @@ function renderJDOnlyResult(data, bubble) {
     html += `<div class="r-card"><div class="r-card-header"><span class="r-card-title">Required Skills</span></div><div class="r-card-body"><div class="skill-grid">`;
     data.required_skills.forEach(s => {
       const col = s.mandatory ? '#34c76e' : 'var(--muted2)';
-      html += `<div class="skill-row">
+      html += `<div class="s
+      kill-row">
         <span class="skill-name">${s.skill}</span>
         <span style="font-size:.7rem;color:${col};flex:1;">${s.mandatory ? '★ Mandatory' : 'Optional'}</span>
         <span class="skill-status" style="color:var(--muted);">${s.years ? s.years+'y' : ''}</span>
@@ -1062,28 +1063,77 @@ function renderJDOnlyResult(data, bubble) {
   bubble.innerHTML = html + '</div>';
 }
 
+function looksLikeJD(text) {
+  if (!text || text.length < 80) return false;
+  const lower = text.toLowerCase();
+  const signals = [
+    'job description', 'we are looking for', 'responsibilities',
+    'requirements', 'qualifications', 'job title', 'about the role',
+    'mandatory skills', 'good to have', 'key responsibilities',
+    'role overview', 'experience required', 'skills required',
+    'what you will do', 'who we are looking',
+  ];
+  return signals.filter(s => lower.includes(s)).length >= 2;
+}
+ 
+// ── Resume context from chatHistory ──────────────────────────────────────────
+function getLastResumeContext() {
+  for (let i = chatHistory.length - 1; i >= 0; i--) {
+    const entry = chatHistory[i];
+    if (entry.role === 'user' && entry._resumeText) {
+      return { text: entry._resumeText, fileName: entry._resumeFileName || 'resume.pdf' };
+    }
+  }
+  return null;
+}
+ 
 // ── Core send function ────────────────────────────────────────────────────────
 async function sendMessage(manualText) {
   if (isProcessing) return;
   const input = document.getElementById('text-input');
   const text = manualText || input.value.trim();
   if (!text && uploadedDocs.length === 0) return;
-
+ 
   if (!manualText && uploadedDocs.length > 0 && !text) {
     triggerAnalysis();
     return;
   }
-
+ 
+  // ── KEY FIX: JD pasted as text + resume already analyzed → run JD vs Resume ──
+  if (text && looksLikeJD(text)) {
+    const resumeCtx = getLastResumeContext();
+    if (resumeCtx) {
+      input.value = '';
+      autoResize(input);
+      const jdDoc = {
+        id: 'jd_text_' + Date.now(),
+        fileName: 'pasted_jd.txt',
+        text: text,
+        detectedType: 'jd',
+      };
+      const resumeDoc = {
+        id: 'resume_ctx_' + Date.now(),
+        fileName: resumeCtx.fileName,
+        text: resumeCtx.text,
+        detectedType: 'resume',
+      };
+      addMsg('user', '📋 JD detected — running match against uploaded resume…');
+      chatHistory.push({ role: 'user', content: 'JD vs Resume match analysis' });
+      await executeAnalysis('JD vs Resume match', [jdDoc, resumeDoc], null);
+      return;
+    }
+  }
+ 
   input.value = '';
   autoResize(input);
   addMsg('user', text);
   chatHistory.push({ role: 'user', content: text });
-
+ 
   isProcessing = true;
   document.getElementById('send-btn').disabled = true;
   addTyping();
   setStatus('Thinking…');
-
+ 
   try {
     const res = await fetch('/.netlify/functions/agent', {
       method: 'POST',
@@ -1107,19 +1157,24 @@ async function sendMessage(manualText) {
     removeTyping();
     addMsg('agent', `⚠️ ${err.message}`);
   }
-
+ 
   isProcessing = false;
   document.getElementById('send-btn').disabled = false;
   setStatus('Ready');
 }
+ 
 
 // ── Execute document analysis ─────────────────────────────────────────────────
 async function executeAnalysis(userMsg, docs, claimedCTC) {
   if (isProcessing) return;
 
   addMsg('user', userMsg);
-  chatHistory.push({ role: 'user', content: userMsg });
-
+  const resumeDoc = docs.find(d => d.detectedType === 'resume' || d.detectedType === 'employment');
+  if (resumeDoc) {
+    chatHistory.push({ role: 'user', content: userMsg, _resumeText: resumeDoc.text, _resumeFileName: resumeDoc.fileName });
+  } else {
+    chatHistory.push({ role: 'user', content: userMsg });
+  }
   uploadedDocs = [];
   document.getElementById('files-row').innerHTML = '';
   document.getElementById('pending-panel').classList.remove('show');
