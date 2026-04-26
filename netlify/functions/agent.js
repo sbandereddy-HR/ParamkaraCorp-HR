@@ -1,5 +1,5 @@
-// ParamkaraCorp-HR Agent — v2 (fixed skill extraction + multi-rank)
-// Fixes: skill years from date ranges, full candidate skill tables, longer text slices
+// ParamkaraCorp-HR Agent — v3
+// NEW: CTC prompt flow, salary/pf/bank combos, service-history+resume matching
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL        = "llama-3.3-70b-versatile";
@@ -77,87 +77,120 @@ function extractCTC(text) {
   return null;
 }
 
+// ── NEW: Parse PF monthly contribution amounts from EPFO text ─────────────────
+function parsePFAmounts(text) {
+  const amounts = [];
+  // EPFO UMANG passbook style
+  const rowPat = /Cont\.?\s+For\s+Due-\s*Month\s+(\d{6})\s+([0-9,]+)/gi;
+  let m;
+  while ((m = rowPat.exec(text)) !== null) {
+    const v = parseFloat(m[2].replace(/,/g,""));
+    if (!isNaN(v) && v > 0 && v <= 15000) amounts.push(v);
+  }
+  if (amounts.length > 0) return amounts;
+  // Named label patterns (salary slip style)
+  const namedPats = [
+    /(?:Employee\s+(?:PF|Provident\s+Fund)|EE\s+PF|EPF\s+Employee)\s*[:\-]?\s*(?:₹|Rs\.?\s*)?([0-9,]+(?:\.\d{2})?)/gi,
+    /(?:PF\s+Contribution|EPF\s+Amount|Monthly\s+PF)\s*[:\-]?\s*(?:₹|Rs\.?\s*)?([0-9,]+(?:\.\d{2})?)/gi,
+  ];
+  for (const p of namedPats) {
+    while ((m = p.exec(text)) !== null) {
+      const v = parseFloat(m[1].replace(/,/g,""));
+      if (!isNaN(v) && v > 100 && v <= 15000) amounts.push(v);
+    }
+  }
+  return amounts;
+}
+
+// ── NEW: Parse bank salary credits ────────────────────────────────────────────
+function parseBankCredits(text) {
+  const amounts = [];
+  const pats = [
+    /(?:salary|sal|neft|imps|credit).*?([0-9,]{5,9}(?:\.\d{2})?)/gi,
+    /([0-9,]{5,9}(?:\.\d{2})?)\s*(?:cr|credit)/gi,
+  ];
+  for (const p of pats) {
+    let m;
+    while ((m = p.exec(text)) !== null) {
+      const v = parseFloat(m[1].replace(/,/g,""));
+      if (!isNaN(v) && v >= 5000 && v <= 10000000) amounts.push(v);
+    }
+  }
+  if (amounts.length === 0) {
+    const all = [...text.matchAll(/\b([0-9]{5,7}(?:\.[0-9]{2})?)\b/g)]
+      .map(m => parseFloat(m[1])).filter(n => n >= 10000 && n <= 500000);
+    return all.slice(0, 12);
+  }
+  return amounts.slice(0, 12);
+}
+
 // ── Doc type detection ────────────────────────────────────────────────────────
 function detectType(text, fileName) {
   const t = (text || '').toLowerCase();
   const f = (fileName || '').toLowerCase();
- 
-  // ── SALARY — require STRONG explicit signals only ─────────────────
-  // A real salary slip ALWAYS has one of these. A resume NEVER does.
+
   const isSalary =
-    t.includes('salary slip') ||
-    t.includes('payslip') ||
-    t.includes('pay slip') ||
-    t.includes('gross earnings') ||
-    t.includes('gross salary') ||
-    t.includes('net pay') ||
-    t.includes('net salary') ||
-    t.includes('take home pay') ||
+    t.includes('salary slip') || t.includes('payslip') || t.includes('pay slip') ||
+    t.includes('gross earnings') || t.includes('gross salary') ||
+    t.includes('net pay') || t.includes('net salary') || t.includes('take home pay') ||
     (t.includes('month') && t.includes('basic') && t.includes('hra') &&
      t.includes('net') && (t.includes('₹') || t.includes('inr') || t.includes('rs.')));
- 
-  // ── RESUME — strong structural patterns ───────────────────────────
-  // Real resumes always have these combinations
+
   const isResume =
-    t.includes('curriculum vitae') ||
-    t.includes('professional summary') ||
-    t.includes('career objective') ||
-    t.includes('work experience') ||
+    t.includes('curriculum vitae') || t.includes('professional summary') ||
+    t.includes('career objective') || t.includes('work experience') ||
     (t.includes('experience') && t.includes('education') && t.includes('skills')) ||
     (t.includes('objective') && t.includes('skills') && t.includes('experience'));
- 
-  // ── JD — specific JD language ─────────────────────────────────────
+
   const isJD =
-    t.includes('job description') ||
-    t.includes('we are looking for') ||
-    t.includes('key responsibilities') ||
-    t.includes('role overview') ||
-    t.includes('mandatory skills') ||
-    t.includes('good to have') ||
+    t.includes('job description') || t.includes('we are looking for') ||
+    t.includes('key responsibilities') || t.includes('role overview') ||
+    t.includes('mandatory skills') || t.includes('good to have') ||
     t.includes('years of experience required') ||
     (t.includes('responsibilities') && t.includes('requirements') && !isResume);
- 
-  // ── OFFER LETTER ──────────────────────────────────────────────────
+
   const isOffer =
-    t.includes('offer letter') ||
-    t.includes('we are pleased to offer') ||
-    t.includes('joining date') ||
-    t.includes('date of joining') ||
+    t.includes('offer letter') || t.includes('we are pleased to offer') ||
+    t.includes('joining date') || t.includes('date of joining') ||
     (t.includes('cost to company') && t.includes('designation') && !isResume);
- 
-  // ── EPFO / Service history ────────────────────────────────────────
+
   const isEPFO =
-    t.includes('epfo') ||
-    t.includes('service history') ||
-    t.includes('uan') ||
+    t.includes('epfo') || t.includes('service history') || t.includes('uan') ||
     (t.includes('passbook') && t.includes('pf'));
- 
-  // ── BANK ──────────────────────────────────────────────────────────
+
   const isBank =
-    t.includes('bank statement') ||
-    t.includes('account statement') ||
+    t.includes('bank statement') || t.includes('account statement') ||
     t.includes('account number') ||
     (t.includes('transaction') && t.includes('closing balance'));
- 
-  // ── Priority order ────────────────────────────────────────────────
-  // Resume vs Salary can conflict — resume wins if both detected
-  // because salary signals are now much stricter
+
   if (isOffer)  return 'offer';
   if (isEPFO)   return 'epfo';
   if (isBank)   return 'bank';
   if (isJD)     return 'jd';
-  if (isResume) return 'resume';   // resume BEFORE salary
+  if (isResume) return 'resume';
   if (isSalary) return 'salary';
- 
-  // ── Filename as last fallback only ────────────────────────────────
+
   if (f.includes('resume') || f.includes('_cv') || f.startsWith('cv'))  return 'resume';
   if (f.includes('jd') || f.includes('job'))                             return 'jd';
   if (f.includes('offer') || f.includes('appointment'))                  return 'offer';
   if (f.includes('salary') || f.includes('payslip'))                     return 'salary';
   if (f.includes('epfo') || f.includes('uan'))                           return 'epfo';
   if (f.includes('bank') || f.includes('statement'))                     return 'bank';
- 
+
   return 'unknown';
+}
+
+// ── NEW: Check if uploaded docs need CTC before analysis ─────────────────────
+function needsCTC(documents, claimedCTC) {
+  if (claimedCTC) return false; // already have it
+  const types = documents.map(d => d.detectedType || 'unknown');
+  const hasCTCDoc = types.some(t => ['salary','bank','epfo'].includes(t));
+  if (!hasCTCDoc) return false;
+  // Try to auto-extract CTC from any doc text
+  for (const doc of documents) {
+    if (extractCTC(doc.text || '')) return false;
+  }
+  return true; // has salary/bank/epfo but no CTC anywhere
 }
 
 // ── Route to analysis mode ────────────────────────────────────────────────────
@@ -179,11 +212,17 @@ function routeMode(documents, modeHint) {
   if (hasJD) return "jd_only";
   if (hasOffer && hasSalary) return "offer_salary";
   if (hasOffer) return "offer_letter";
-  if ((hasSalary || hasBank) && numResumes >= 1) return "salary_resume";
-  if (hasSalary || hasBank) return "salary_slip";
-  if (numResumes >= 1 && hasEPFO) return "epfo_crosscheck";
+
+  // ── NEW: all CTC verification combos ──────────────────────────────────────
+  // Service history (EPFO) + resume → employment verification
+  if (hasEPFO && numResumes >= 1) return "epfo_crosscheck";
+
+  // CTC inflation combos (salary/bank/pf in any combination)
+  const ctcDocCount = [hasSalary, hasBank, hasEPFO].filter(Boolean).length;
+  if (ctcDocCount >= 1) return "ctc_verification";
+
   if (hasEPFO) return "epfo_only";
-  if (numResumes >= 2) return "multi_resume_nojd";  // resumes only, no JD
+  if (numResumes >= 2) return "multi_resume_nojd";
   if (numResumes >= 1) return "resume_only";
   return "unknown_docs";
 }
@@ -234,20 +273,52 @@ function buildPrompt(documents, claimedCTC, modeHint) {
     }
   }
 
-  // ── Build doc sections — INCREASED slice to 7000 for resumes ──────────────
+  // ── NEW: PF-based CTC validators ──────────────────────────────────────────
+  const epfoDoc = documents.find(d => d.detectedType === "epfo");
+  if (epfoDoc) {
+    const pfAmounts = parsePFAmounts(epfoDoc.text || "");
+    if (pfAmounts.length > 0) {
+      const avgPF = pfAmounts.reduce((a,b)=>a+b,0) / pfAmounts.length;
+      const derivedBasic = Math.round(avgPF / 0.12);
+      const derivedMonthly = Math.round(derivedBasic / 0.4); // basic ~40% of gross
+      const derivedAnnual = derivedMonthly * 12;
+      validatorCtx += `\nPF VALIDATORS (from EPFO passbook):\nPF amounts found: ${pfAmounts.slice(0,6).join(', ')}${pfAmounts.length>6?'...':''}\nAvg PF/month=₹${Math.round(avgPF)} → Derived Basic=₹${derivedBasic} → Derived Annual≈₹${(derivedAnnual/100000).toFixed(2)}L\n`;
+      if (effectiveCTC) {
+        const claimed = effectiveCTC < 500 ? effectiveCTC*100000 : effectiveCTC;
+        const pct = Math.round(((claimed-derivedAnnual)/derivedAnnual)*1000)/10;
+        validatorCtx += `PF-CTC Check: Claimed=₹${(claimed/100000).toFixed(2)}L vs PF-Derived=₹${(derivedAnnual/100000).toFixed(2)}L → ${pct>0?'+':''}${pct}% → ${Math.abs(pct)<=20?"NORMAL":pct>40?"HIGHLY_INFLATED":"INFLATED"}\n`;
+      }
+    }
+  }
+
+  // ── NEW: Bank-based CTC validators ────────────────────────────────────────
+  const bankDoc = documents.find(d => d.detectedType === "bank");
+  if (bankDoc) {
+    const credits = parseBankCredits(bankDoc.text || "");
+    if (credits.length > 0) {
+      const avgCredit = credits.reduce((a,b)=>a+b,0) / credits.length;
+      const derivedAnnual = Math.round(avgCredit * 12 * 1.15); // net→gross approx
+      validatorCtx += `\nBANK VALIDATORS:\nSalary credits found: ${credits.slice(0,6).map(c=>'₹'+c.toLocaleString('en-IN')).join(', ')}${credits.length>6?'...':''}\nAvg monthly credit=₹${Math.round(avgCredit).toLocaleString('en-IN')} → Derived Annual≈₹${(derivedAnnual/100000).toFixed(2)}L\n`;
+      if (effectiveCTC) {
+        const claimed = effectiveCTC < 500 ? effectiveCTC*100000 : effectiveCTC;
+        const pct = Math.round(((claimed-derivedAnnual)/derivedAnnual)*1000)/10;
+        validatorCtx += `Bank-CTC Check: Claimed=₹${(claimed/100000).toFixed(2)}L vs Bank-Derived=₹${(derivedAnnual/100000).toFixed(2)}L → ${pct>0?'+':''}${pct}% → ${Math.abs(pct)<=20?"NORMAL":pct>40?"HIGHLY_INFLATED":"INFLATED"}\n`;
+      }
+    }
+  }
+
+  // Build doc sections
   const docSections = documents.map((d, i) => {
     const label = (d.detectedType||"unknown").toUpperCase();
     if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE]`;
-    // Give resumes more context so skills + dates can be fully parsed
     const limit = d.detectedType === "resume" ? 7000
-            : d.detectedType === "epfo"   ? 3000   // PF docs are long, keep short
+            : d.detectedType === "epfo"   ? 3000
             : 4000;
     return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"").slice(0, limit)}`;
   }).join("\n\n");
 
   const schema = SCHEMAS[analysisMode] || SCHEMAS.unknown_docs;
 
-  // ── FIXED: rules no longer kill skill arrays; added explicit years extraction instructions
   const system = `You are ParamkaraCorp-HR, expert Indian HR fraud detection and recruitment AI.
 Analysis mode: ${analysisMode.toUpperCase()}
 ${validatorCtx}
@@ -260,6 +331,22 @@ STRICT RULES:
 6. Use pre-computed validator values exactly as given.
 7. Indian PF ceiling: ₹1800/month (basic cap ₹15000). GST since July 2017.
 8. Scores 0-100: 80+=SHORTLIST, 55-79=MAYBE, <55=REJECT.
+${analysisMode === 'ctc_verification' ? `
+CTC VERIFICATION RULES:
+- claimed_ctc is in rupees (already converted from LPA if needed).
+- salary_slip section: check if slip is GENUINE/SUSPICIOUS/FAKE based on math integrity.
+- pf_analysis: derive basic salary from PF amount (PF = 12% of basic, max ₹1800/month).
+- bank_analysis: avg of salary credits × 12 × 1.15 = derived annual CTC.
+- inflation verdict: NORMAL if ≤20%, INFLATED if 20-40%, HIGHLY_INFLATED if >40%.
+- overall_verdict: combine all available signals. If only one source, base on that.
+` : ''}
+${analysisMode === 'epfo_crosscheck' ? `
+SERVICE VERIFICATION RULES:
+- Match resume companies against EPFO companies (fuzzy match, abbreviations ok).
+- Flag companies only in resume as suspicious.
+- Compute total years from each source.
+- inflation_years = resume_total - epfo_total (if positive, candidate inflated experience).
+` : ''}
 
 HOW TO COMPUTE actual_years PER SKILL:
 - Read ALL company entries in the resume: company name, start date, end date (or "Present").
@@ -281,7 +368,6 @@ ${schema}`;
 // ── Schemas ───────────────────────────────────────────────────────────────────
 const SCHEMAS = {
 
-  // ── JD vs Single Resume ───────────────────────────────────────────────────
   jd_resume: `{
   "type": "jd_resume",
   "candidate": {
@@ -310,7 +396,6 @@ const SCHEMAS = {
   }
 }`,
 
-  // ── Multi-candidate ranking (JD + 2+ resumes) ────────────────────────────
   multi_rank: `{
   "type": "multi_rank",
   "role": "string",
@@ -411,11 +496,66 @@ const SCHEMAS = {
   }
 }`,
 
+  // ── NEW: CTC Verification — handles all combos of salary/pf/bank ─────────
+  ctc_verification: `{
+  "type": "ctc_verification",
+  "claimed_ctc": number,
+  "claimed_ctc_lpa": number,
+  "overall_verdict": "GENUINE"|"SUSPICIOUS"|"HIGHLY_INFLATED"|"INSUFFICIENT_DATA",
+  "overall_verdict_reason": "string",
+  "confidence": "HIGH"|"MEDIUM"|"LOW",
+  "sources_used": ["salary_slip"|"pf_history"|"bank_statement"],
+  "salary_slip": {
+    "present": boolean,
+    "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE"|null,
+    "overall_score": number|null,
+    "extracted": {
+      "employee_name": "string|null",
+      "company_name": "string|null",
+      "slip_month": "string|null",
+      "basic": number|null,
+      "gross": number|null,
+      "net": number|null,
+      "pf_employee": number|null
+    },
+    "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
+    "derived_annual_ctc": number|null,
+    "inflation_percent": number|null,
+    "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null,
+    "red_flags": ["string"]
+  },
+  "pf_analysis": {
+    "present": boolean,
+    "pf_amounts": [number],
+    "avg_pf_monthly": number|null,
+    "derived_basic": number|null,
+    "derived_annual_ctc": number|null,
+    "inflation_percent": number|null,
+    "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null,
+    "consistency": "CONSISTENT"|"INCONSISTENT"|"INSUFFICIENT_DATA",
+    "note": "string"
+  },
+  "bank_analysis": {
+    "present": boolean,
+    "credits_found": number,
+    "avg_monthly_credit": number|null,
+    "derived_annual_ctc": number|null,
+    "inflation_percent": number|null,
+    "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null,
+    "consistency": "CONSISTENT"|"INCONSISTENT"|"INSUFFICIENT_DATA",
+    "note": "string"
+  },
+  "red_flags": ["string"],
+  "positive_signals": ["string"]
+}`,
+
   epfo_crosscheck: `{
   "type": "employment",
   "mode": "epfo_crosscheck",
-  "matched": [{"resume_company": "string", "verified_company": "string", "date_match": boolean}],
+  "candidate_name": "string|null",
+  "matched": [{"resume_company": "string", "epfo_company": "string", "date_match": boolean, "experience_gap_months": number}],
   "only_in_resume": [{"company": "string", "flag": "string"}],
+  "only_in_epfo": [{"company": "string"}],
   "experience_summary": {"resume_total_years": number, "epfo_total_years": number, "inflation_years": number},
   "verdict": "MATCH"|"PARTIAL"|"MISMATCH",
   "verdict_reason": "string",
@@ -504,6 +644,33 @@ exports.handler = async (event) => {
         doc.detectedType = detectType(doc.text || "", doc.fileName || "");
     }
 
+    // ── NEW: CTC needed check — return prompt signal ──────────────────────────
+    if (needsCTC(documents, claimedCTC)) {
+      return {
+        statusCode: 200,
+        headers: { ...CORS, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "needs_ctc",
+          detected_docs: documents.map(d => ({ fileName: d.fileName, detectedType: d.detectedType })),
+        }),
+      };
+    }
+
+    // ── NEW: Service history without resume — return prompt signal ────────────
+    const types = documents.map(d => d.detectedType);
+    const hasEPFO = types.includes('epfo');
+    const hasResume = types.includes('resume');
+    if (hasEPFO && !hasResume) {
+      return {
+        statusCode: 200,
+        headers: { ...CORS, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "needs_resume_for_epfo",
+          detected_docs: documents.map(d => ({ fileName: d.fileName, detectedType: d.detectedType })),
+        }),
+      };
+    }
+
     const { system, userPrompt, analysisMode, effectiveCTC } = buildPrompt(documents, claimedCTC, mode);
     const hasImage = documents.some(d => d.base64Image);
 
@@ -535,15 +702,14 @@ exports.handler = async (event) => {
         result = m ? JSON.parse(m[0]) : JSON.parse(ct);
       }
     } else {
-      // For multi_rank with many resumes, bump token limit so all candidates fit
       const isMulti = analysisMode === "multi_rank";
-      const tokenLimit = isMulti ? 6000 : 4000;
+      const tokenLimit = isMulti ? 6000 : analysisMode === "ctc_verification" ? 5000 : 4000;
       result = await groq([{ role: "system", content: system }, { role: "user", content: userPrompt }], true, tokenLimit);
     }
 
     if (!result.type) result.type = analysisMode;
 
-    // Attach server-computed CTC inflation
+    // Attach server-computed CTC inflation for salary docs
     if (effectiveCTC) {
       const salDoc = documents.find(d => d.detectedType === "salary" || d.detectedType === "bank");
       if (salDoc) {
