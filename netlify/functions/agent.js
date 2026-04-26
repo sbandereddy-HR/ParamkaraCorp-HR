@@ -1,11 +1,16 @@
-// ParamkaraCorp-HR Agent — v4
-// Resume-first guided session flow
-// Modes: gap_analysis, jd_resume, multi_rank, epfo_crosscheck, epfo_only,
-//        ctc_verification, offer_letter, offer_salary, resume_only, multi_resume_nojd
+// ParamkaraCorp-HR Agent — v5 (STRICT PIPELINE)
+// Architecture: UPLOAD → DETECT → VALIDATE → QUEUE → ANALYZE (ONCE) → AGGREGATE → OUTPUT
+// Single combined analysis call only. Resume-first enforced server-side.
 
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const MODEL        = "llama-3.3-70b-versatile";
-const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const GROQ_API_KEY  = process.env.GROQ_API_KEY;
+const MODEL         = "llama-3.3-70b-versatile";
+const VISION_MODEL  = "meta-llama/llama-4-scout-17b-16e-instruct";
+
+// ── Doc priority order (lower index = higher priority) ───────────────────────
+const DOC_PRIORITY = ["resume", "jd", "salary", "epfo", "bank", "offer", "unknown"];
+// ── Token budget per doc type ────────────────────────────────────────────────
+const DOC_CHAR_LIMITS = { resume: 3000, jd: 1500, salary: 1500, epfo: 1500, bank: 1500, offer: 1500, unknown: 800 };
+const MAX_DOCS = 4;
 
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
@@ -13,7 +18,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-// ── Groq caller ───────────────────────────────────────────────────────────────
+// ── Groq caller ────────────────────────────────────────────────────────────────
 async function groq(messages, json = false, maxTokens = 2500) {
   const body = { model: MODEL, messages, temperature: 0.05, max_tokens: maxTokens };
   if (json) body.response_format = { type: "json_object" };
@@ -22,7 +27,10 @@ async function groq(messages, json = false, maxTokens = 2500) {
     headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`Groq ${res.status}: ${await res.text()}`);
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Groq ${res.status}: ${errText}`);
+  }
   const data = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "";
   if (json) {
@@ -33,17 +41,18 @@ async function groq(messages, json = false, maxTokens = 2500) {
   return content;
 }
 
-async function groqWithRetry(messages, json = false, maxTokens = 2500) {
-  try { return await groq(messages, json, maxTokens); }
-  catch (e) {
-    const shouldRetry = e.message.includes("429") || e.message.includes("500") || e.message.includes("503");
-    if (!shouldRetry) throw e;
-    await new Promise(r => setTimeout(r, 3000));
-    return await groq(messages, json, maxTokens);
+async function groqWithRetry(messages, json = false, maxTokens = 2500, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try { return await groq(messages, json, maxTokens); }
+    catch (e) {
+      const retryable = e.message.includes("429") || e.message.includes("503") || e.message.includes("500");
+      if (!retryable || attempt === retries) throw e;
+      await new Promise(r => setTimeout(r, 2500 * (attempt + 1)));
+    }
   }
 }
 
-// ── Validators ────────────────────────────────────────────────────────────────
+// ── Validators ─────────────────────────────────────────────────────────────────
 function validateGST(text) {
   if (!text) return { found: false };
   const m = text.match(/\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z])\b/);
@@ -133,7 +142,7 @@ function parseBankCredits(text) {
   return amounts.slice(0, 12);
 }
 
-// ── Doc type detection ────────────────────────────────────────────────────────
+// ── Doc type detection ──────────────────────────────────────────────────────────
 function detectType(text, fileName) {
   const t = (text || '').toLowerCase();
   const f = (fileName || '').toLowerCase();
@@ -189,22 +198,30 @@ function detectType(text, fileName) {
   return 'unknown';
 }
 
-// ── CTC needed check ──────────────────────────────────────────────────────────
-function needsCTC(documents, claimedCTC) {
-  if (claimedCTC) return false;
-  const types = documents.map(d => d.detectedType || 'unknown');
-  const hasCTCDoc = types.some(t => ['salary','bank','epfo'].includes(t));
-  if (!hasCTCDoc) return false;
-  for (const doc of documents) {
-    if (extractCTC(doc.text || '')) return false;
-  }
-  return true;
+// ── Pipeline: apply doc limits ─────────────────────────────────────────────────
+// Sort by priority, cap at MAX_DOCS, truncate text per type
+function applyDocLimits(documents) {
+  // Sort by priority
+  const sorted = [...documents].sort((a, b) => {
+    const pa = DOC_PRIORITY.indexOf(a.detectedType || 'unknown');
+    const pb = DOC_PRIORITY.indexOf(b.detectedType || 'unknown');
+    return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb);
+  });
+
+  // Cap at MAX_DOCS — drop lowest-priority first (already sorted)
+  const limited = sorted.slice(0, MAX_DOCS);
+
+  // Truncate each doc text
+  return limited.map(doc => ({
+    ...doc,
+    text: doc.base64Image ? doc.text : (doc.text || '').slice(0, DOC_CHAR_LIMITS[doc.detectedType] || 800)
+  }));
 }
 
-// ── Route to analysis mode ────────────────────────────────────────────────────
+// ── Route to unified analysis mode ─────────────────────────────────────────────
 function routeMode(documents) {
   const types = documents.map(d => d.detectedType || "unknown");
-  const has  = t => types.includes(t);
+  const has   = t => types.includes(t);
   const count = t => types.filter(x => x === t).length;
 
   const hasJD      = has("jd");
@@ -213,31 +230,35 @@ function routeMode(documents) {
   const hasSalary  = has("salary");
   const hasEPFO    = has("epfo");
   const hasBank    = has("bank");
+  const hasCTC     = hasSalary || hasBank || hasEPFO;
 
-  // EPFO + resume → cross-check employment
+  // Unified full analysis: resume + jd + any financial docs → comprehensive
+  if (numResumes >= 1 && hasJD && hasCTC) return "full_analysis";
+  if (numResumes >= 1 && hasJD && hasOffer) return "full_analysis";
+
+  // EPFO cross-check
   if (hasEPFO && numResumes >= 1) return "epfo_crosscheck";
 
   // JD routing
-  if (hasJD && numResumes >= 2)  return "multi_rank";
+  if (hasJD && numResumes >= 2) return "multi_rank";
   if (hasJD && numResumes === 1) return "jd_resume";
-  if (hasJD)                     return "jd_only";
+  if (hasJD) return "jd_only";
 
   // Offer letter
-  if (hasOffer && hasSalary)     return "offer_salary";
-  if (hasOffer)                   return "offer_letter";
+  if (hasOffer && hasSalary) return "offer_salary";
+  if (hasOffer) return "offer_letter";
 
-  // CTC/financial docs
-  const ctcDocCount = [hasSalary, hasBank, hasEPFO].filter(Boolean).length;
-  if (ctcDocCount >= 1)          return "ctc_verification";
+  // CTC/financial docs (with resume in payload)
+  if (hasCTC && numResumes >= 1) return "ctc_verification";
 
   // Resume-only
   if (numResumes >= 2) return "multi_resume_nojd";
-  if (numResumes >= 1) return "resume_only";  // gap analysis
+  if (numResumes >= 1) return "resume_only";
 
   return "unknown_docs";
 }
 
-// ── Build system prompt ───────────────────────────────────────────────────────
+// ── Build unified prompt ────────────────────────────────────────────────────────
 function buildPrompt(documents, claimedCTC) {
   for (const doc of documents) {
     if (!doc.detectedType || doc.detectedType === "unknown")
@@ -262,7 +283,7 @@ function buildPrompt(documents, claimedCTC) {
   }
 
   // Salary validators
-  const salDoc = documents.find(d => d.detectedType === "salary" || d.detectedType === "bank");
+  const salDoc = documents.find(d => d.detectedType === "salary");
   if (salDoc) {
     const gross = extractAmt(salDoc.text,"Gross Earnings","Total Earnings","Gross Salary","Gross");
     const basic = extractAmt(salDoc.text,"Basic Salary","Basic Pay","Basic");
@@ -317,12 +338,11 @@ function buildPrompt(documents, claimedCTC) {
     }
   }
 
-  // Build doc sections
+  // Build doc sections with per-type char limits applied
   const docSections = documents.map((d, i) => {
     const label = (d.detectedType||"unknown").toUpperCase();
-    if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE]`;
-    const limit = d.detectedType === "resume" ? 4000 : d.detectedType === "epfo" ? 2000 : 2500;
-    return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"").slice(0, limit)}`;
+    if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE — processed by vision model]`;
+    return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"")}`;
   }).join("\n\n");
 
   const schema = SCHEMAS[analysisMode] || SCHEMAS.unknown_docs;
@@ -332,33 +352,46 @@ function buildPrompt(documents, claimedCTC) {
 RESUME ANALYSIS RULES (gap_analysis mode):
 - Extract ALL companies with from/to dates in YYYY-MM format.
 - Gap: any period ≥ 1 month between consecutive jobs.
-- Severity: SHORT = 1-2mo, MEDIUM = 3-5mo, LONG = ≥6mo.
-- Label gaps clearly (e.g. "6-month gap between Infosys and Wipro").
-- Overall verdict: CLEAN if total_gap_months < 3, else GAPS_FOUND.
+- Severity: SHORT=1-2mo, MEDIUM=3-5mo, LONG=≥6mo.
+- Overall verdict: CLEAN if total_gap_months<3, else GAPS_FOUND.
 `,
     epfo_crosscheck: `
 EPFO CROSS-CHECK RULES:
-- Match resume companies against EPFO companies (fuzzy match, abbreviations ok).
-- Flag companies only in resume as suspicious (unverified).
-- Compute total years from each source.
-- inflation_years = resume_total - epfo_total (positive = inflated experience).
+- Match resume companies against EPFO (fuzzy match, abbreviations ok).
+- Flag companies only in resume as suspicious.
+- inflation_years = resume_total - epfo_total.
 `,
     ctc_verification: `
 CTC VERIFICATION RULES:
 - claimed_ctc is already in rupees.
-- salary_slip: check math integrity (gross - deductions = net; PF = 12% of basic, cap ₹1800).
-- pf_analysis: derive basic = PF/0.12, monthly ≈ basic/0.4, annual = monthly*12.
-- bank_analysis: avg salary credits * 12 * 1.15 = derived annual CTC.
-- inflation verdict: NORMAL ≤20%, INFLATED 20-40%, HIGHLY_INFLATED >40%.
-- overall_verdict: combine all available signals.
+- salary_slip: check math integrity (gross - deductions = net; PF=12% of basic, cap ₹1800).
+- pf_analysis: derive basic=PF/0.12, monthly≈basic/0.4, annual=monthly*12.
+- bank_analysis: avg credits*12*1.15=derived annual CTC.
+- inflation: NORMAL≤20%, INFLATED 20-40%, HIGHLY_INFLATED>40%.
 `,
     offer_letter: `
 OFFER LETTER RULES:
 - Use pre-computed CIN and GST validator results exactly.
-- Pre-2017 offer → GST absence is NORMAL (GST introduced July 2017).
-- MNC (Accenture, TCS etc.) → CIN absence may be NORMAL (subsidiary structures).
-- Check: proper letterhead, realistic CTC, valid designation, sensible dates, professional language.
-- Score 0-100; verdict: AUTHENTIC ≥75, SUSPICIOUS 50-74, FAKE <50.
+- Pre-2017 offer → GST absence is NORMAL.
+- MNC → CIN absence may be NORMAL.
+- Score 0-100; verdict: AUTHENTIC≥75, SUSPICIOUS 50-74, FAKE<50.
+`,
+    jd_resume: `
+JD-RESUME MATCH RULES:
+- Compute actual_years per skill from ALL company entries.
+- Sum durations across roles where skill was used.
+- required_years: from JD. matched: true if actual_years>=required_years.
+`,
+    full_analysis: `
+FULL UNIFIED ANALYSIS RULES:
+- Produce ALL applicable sub-analyses in one JSON response.
+- skill_match: match resume skills to JD (if JD present).
+- gap_analysis: employment gaps in resume.
+- ctc_check: if salary/bank/epfo present, verify CTC.
+- epfo_check: if EPFO present, cross-check companies.
+- offer_check: if offer letter present, verify authenticity.
+- fraud_risk: aggregate fraud risk from all signals.
+- final_decision: single HIRE/MAYBE/REJECT with reasoning.
 `,
   };
 
@@ -369,19 +402,16 @@ STRICT RULES:
 1. Output ONLY valid JSON. Zero prose, zero markdown outside JSON.
 2. verdict_reason, recommendation_reason: ONE short sentence (max 20 words).
 3. strengths/gaps arrays: max 4 items, max 8 words each.
-4. NEVER reproduce document text verbatim.
+4. All monetary values in rupees (₹).
 5. Use pre-computed validator values exactly as given.
 6. Indian PF ceiling: ₹1800/month (basic cap ₹15000). GST since July 2017.
-7. Scores 0-100: 80+=SHORTLIST, 55-79=MAYBE, <55=REJECT (for skills).
+7. Scores 0-100: 80+=SHORTLIST, 55-79=MAYBE, <55=REJECT.
 ${modeSpecificRules[analysisMode] || ''}
 HOW TO COMPUTE actual_years PER SKILL:
 - Read ALL company entries: name, start date, end date (or "Present").
 - For each role, identify skills used based on job title and description.
-- Compute duration: (end_year - start_year) + (end_month - start_month)/12. Round to 1 decimal.
-- Sum durations across all roles where that skill was used.
-- If a skill is in Skills section but no role mentions it, use 0.5 as conservative estimate.
-- required_years: extract from JD (e.g. "5+ years of Python" → 5). null if not specified.
-- matched: true if actual_years >= required_years (or > 0 when required_years is null).
+- Compute duration: (end_year-start_year)+(end_month-start_month)/12. Round to 1 decimal.
+- Sum durations across roles where that skill was used.
 
 REQUIRED JSON SCHEMA:
 ${schema}`;
@@ -389,8 +419,58 @@ ${schema}`;
   return { system, userPrompt: docSections, analysisMode, effectiveCTC };
 }
 
-// ── Schemas ───────────────────────────────────────────────────────────────────
+// ── Schemas ────────────────────────────────────────────────────────────────────
 const SCHEMAS = {
+
+  // NEW: Unified full analysis schema
+  full_analysis: `{
+  "type": "full_analysis",
+  "candidate": {"name": "string|null", "total_experience_years": number, "current_role": "string|null"},
+  "skill_match": {
+    "present": boolean,
+    "match_percentage": number|null,
+    "mandatory_skills_met": number|null,
+    "mandatory_skills_total": number|null,
+    "recommendation": "SHORTLIST"|"MAYBE"|"REJECT"|null,
+    "recommendation_reason": "string|null",
+    "skills": [{"skill": "string", "required_years": number|null, "actual_years": number, "matched": boolean}]
+  },
+  "gap_analysis": {
+    "present": boolean,
+    "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
+    "gaps": [{"from_company": "string", "to_company": "string", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG"}],
+    "total_gap_months": number,
+    "verdict": "CLEAN"|"GAPS_FOUND"
+  },
+  "ctc_check": {
+    "present": boolean,
+    "claimed_ctc_lpa": number|null,
+    "overall_verdict": "GENUINE"|"SUSPICIOUS"|"HIGHLY_INFLATED"|"INSUFFICIENT_DATA"|null,
+    "confidence": "HIGH"|"MEDIUM"|"LOW"|null,
+    "sources_used": ["salary_slip"|"pf_history"|"bank_statement"],
+    "salary_slip": {"present": boolean, "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE"|null, "derived_annual_ctc": number|null, "inflation_percent": number|null, "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null, "red_flags": ["string"]},
+    "pf_analysis": {"present": boolean, "derived_annual_ctc": number|null, "inflation_percent": number|null, "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null},
+    "bank_analysis": {"present": boolean, "derived_annual_ctc": number|null, "inflation_percent": number|null, "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null}
+  },
+  "epfo_check": {
+    "present": boolean,
+    "verdict": "MATCH"|"PARTIAL"|"MISMATCH"|null,
+    "verdict_reason": "string|null",
+    "inflation_years": number|null,
+    "red_flags": ["string"]
+  },
+  "offer_check": {
+    "present": boolean,
+    "verdict": "AUTHENTIC"|"SUSPICIOUS"|"FAKE"|null,
+    "overall_score": number|null,
+    "verdict_reason": "string|null"
+  },
+  "fraud_risk": "LOW"|"MEDIUM"|"HIGH",
+  "fraud_signals": ["string"],
+  "positive_signals": ["string"],
+  "final_decision": "HIRE"|"MAYBE"|"REJECT",
+  "final_decision_reason": "string"
+}`,
 
   resume_only: `{
   "type": "employment",
@@ -407,21 +487,8 @@ const SCHEMAS = {
 
   jd_resume: `{
   "type": "jd_resume",
-  "candidate": {
-    "name": "string",
-    "total_experience_years": number,
-    "current_role": "string",
-    "current_company": "string"
-  },
-  "skill_match": [
-    {
-      "skill": "string",
-      "required_years": number|null,
-      "actual_years": number,
-      "matched": boolean,
-      "used_at": "company1, company2"
-    }
-  ],
+  "candidate": {"name": "string", "total_experience_years": number, "current_role": "string", "current_company": "string"},
+  "skill_match": [{"skill": "string", "required_years": number|null, "actual_years": number, "matched": boolean, "used_at": "company1, company2"}],
   "scorecard": {
     "match_percentage": number,
     "mandatory_skills_met": number,
@@ -438,25 +505,10 @@ const SCHEMAS = {
   "role": "string",
   "jd_skills": ["skill1", "skill2"],
   "candidates": [
-    {
-      "name": "string",
-      "total_experience_years": number,
-      "current_role": "string",
-      "match_percentage": number,
-      "mandatory_met": number,
-      "mandatory_total": number,
-      "recommendation": "SHORTLIST"|"MAYBE"|"REJECT",
-      "recommendation_reason": "string",
-      "skill_match": [
-        {
-          "skill": "string",
-          "required_years": number|null,
-          "actual_years": number,
-          "matched": boolean,
-          "used_at": "company1, company2"
-        }
-      ]
-    }
+    {"name": "string", "total_experience_years": number, "current_role": "string",
+     "match_percentage": number, "mandatory_met": number, "mandatory_total": number,
+     "recommendation": "SHORTLIST"|"MAYBE"|"REJECT", "recommendation_reason": "string",
+     "skill_match": [{"skill": "string", "required_years": number|null, "actual_years": number, "matched": boolean}]}
   ]
 }`,
 
@@ -495,18 +547,13 @@ const SCHEMAS = {
       "language_quality": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"},
       "red_flags_check": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"}
     },
-    "red_flags_list": ["string"],
-    "positive_signals": ["string"]
+    "red_flags_list": ["string"], "positive_signals": ["string"]
   },
   "salary_check": {
     "overall_score": number, "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE", "verdict_reason": "string",
     "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
     "red_flags": ["string"],
-    "ctc_inflation": {
-      "derived_annual_ctc": number|null, "claimed_ctc_annual": number|null,
-      "inflation_percent": number|null,
-      "verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_CLAIM_TO_COMPARE"
-    }
+    "ctc_inflation": {"derived_annual_ctc": number|null, "claimed_ctc_annual": number|null, "inflation_percent": number|null, "verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_CLAIM_TO_COMPARE"}
   }
 }`,
 
@@ -522,15 +569,7 @@ const SCHEMAS = {
     "present": boolean,
     "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE"|null,
     "overall_score": number|null,
-    "extracted": {
-      "employee_name": "string|null",
-      "company_name": "string|null",
-      "slip_month": "string|null",
-      "basic": number|null,
-      "gross": number|null,
-      "net": number|null,
-      "pf_employee": number|null
-    },
+    "extracted": {"employee_name": "string|null", "company_name": "string|null", "slip_month": "string|null", "basic": number|null, "gross": number|null, "net": number|null, "pf_employee": number|null},
     "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
     "derived_annual_ctc": number|null,
     "inflation_percent": number|null,
@@ -538,25 +577,16 @@ const SCHEMAS = {
     "red_flags": ["string"]
   },
   "pf_analysis": {
-    "present": boolean,
-    "pf_amounts": [number],
-    "avg_pf_monthly": number|null,
-    "derived_basic": number|null,
-    "derived_annual_ctc": number|null,
-    "inflation_percent": number|null,
-    "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null,
-    "consistency": "CONSISTENT"|"INCONSISTENT"|"INSUFFICIENT_DATA",
-    "note": "string"
+    "present": boolean, "pf_amounts": [number], "avg_pf_monthly": number|null,
+    "derived_basic": number|null, "derived_annual_ctc": number|null,
+    "inflation_percent": number|null, "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null,
+    "consistency": "CONSISTENT"|"INCONSISTENT"|"INSUFFICIENT_DATA", "note": "string"
   },
   "bank_analysis": {
-    "present": boolean,
-    "credits_found": number,
-    "avg_monthly_credit": number|null,
-    "derived_annual_ctc": number|null,
-    "inflation_percent": number|null,
+    "present": boolean, "credits_found": number, "avg_monthly_credit": number|null,
+    "derived_annual_ctc": number|null, "inflation_percent": number|null,
     "inflation_verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_DATA"|null,
-    "consistency": "CONSISTENT"|"INCONSISTENT"|"INSUFFICIENT_DATA",
-    "note": "string"
+    "consistency": "CONSISTENT"|"INCONSISTENT"|"INSUFFICIENT_DATA", "note": "string"
   },
   "red_flags": ["string"],
   "positive_signals": ["string"]
@@ -582,8 +612,7 @@ const SCHEMAS = {
     {"name": "string", "total_experience_years": number, "current_role": "string",
      "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
      "skills_extracted": [{"skill": "string", "years": number}],
-     "verdict": "CLEAN"|"GAPS_FOUND", "total_gap_months": number
-    }
+     "verdict": "CLEAN"|"GAPS_FOUND", "total_gap_months": number}
   ]
 }`,
 
@@ -596,17 +625,17 @@ const SCHEMAS = {
 }`,
 };
 
-// ── Conversational fallback ───────────────────────────────────────────────────
+// ── Conversational fallback ──────────────────────────────────────────────────────
 async function chat(message, history) {
   const msgs = [
-    { role: "system", content: `You are ParamkaraCorp-HR Assistant for Indian HR professionals. Help with: resume screening, JD matching, offer letter fraud, salary verification, EPFO checks. Be concise — max 3 sentences. Use bullet points only when listing.` },
+    { role: "system", content: `You are ParamkaraCorp-HR Assistant for Indian HR professionals. Help with: resume screening, JD matching, offer letter fraud, salary verification, EPFO checks. Be concise — max 3 sentences.` },
     ...(history||[]).slice(-4),
     { role: "user", content: message },
   ];
   return { type: "conversation", reply: await groq(msgs, false, 300) };
 }
 
-// ── Main handler ──────────────────────────────────────────────────────────────
+// ── Main handler ────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: CORS, body: "" };
   if (event.httpMethod !== "POST")    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "Method not allowed" }) };
@@ -616,22 +645,37 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
     let { message, documents, history, claimedCTC } = body;
 
-    // ── Pure conversation ─────────────────────────────────────────────────────
+    // ── Pure conversation ──────────────────────────────────────────────────────
     if (!documents || documents.length === 0) {
       const r = await chat(message || "Hello", history);
       return { statusCode: 200, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify(r) };
     }
 
-    // ── Server-side type detection ────────────────────────────────────────────
+    // ── Server-side type detection ─────────────────────────────────────────────
     for (const doc of documents) {
       if (!doc.detectedType || doc.detectedType === "unknown")
         doc.detectedType = detectType(doc.text || "", doc.fileName || "");
     }
 
-    // ── CTC needed check ──────────────────────────────────────────────────────
-    // NOTE: In v4 frontend handles this before calling agent for most cases.
-    // Guard here for direct API callers or edge cases.
-    if (needsCTC(documents, claimedCTC)) {
+    // ── GATE 1: Resume MUST be present ────────────────────────────────────────
+    const types = documents.map(d => d.detectedType);
+    const hasResume = types.includes("resume");
+    if (!hasResume) {
+      return {
+        statusCode: 400,
+        headers: { ...CORS, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "error",
+          code: "RESUME_REQUIRED",
+          error: "Resume is mandatory. Please upload a resume before running analysis.",
+        }),
+      };
+    }
+
+    // ── GATE 2: CTC needed check ───────────────────────────────────────────────
+    const needsCTCDocs = types.some(t => ["salary","bank","epfo"].includes(t));
+    const hasCTCValue  = !!claimedCTC || documents.some(d => !!extractCTC(d.text||""));
+    if (needsCTCDocs && !hasCTCValue) {
       return {
         statusCode: 200,
         headers: { ...CORS, "Content-Type": "application/json" },
@@ -642,37 +686,24 @@ exports.handler = async (event) => {
       };
     }
 
-    // ── EPFO without resume ────────────────────────────────────────────────────
-    // In v4, the frontend always injects the session resume alongside EPFO.
-    // But guard anyway:
-    const types = documents.map(d => d.detectedType);
-    const hasEPFO   = types.includes('epfo');
-    const hasResume = types.includes('resume');
-    if (hasEPFO && !hasResume) {
-      return {
-        statusCode: 200,
-        headers: { ...CORS, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "needs_resume_for_epfo",
-          detected_docs: documents.map(d => ({ fileName: d.fileName, detectedType: d.detectedType })),
-        }),
-      };
-    }
+    // ── PIPELINE: Apply doc limits (priority sort + MAX_DOCS cap + truncation) ─
+    const limitedDocs = applyDocLimits(documents);
+    const droppedCount = documents.length - limitedDocs.length;
 
-    // ── Build prompt & call LLM ───────────────────────────────────────────────
-    const { system, userPrompt, analysisMode, effectiveCTC } = buildPrompt(documents, claimedCTC);
-    const hasImage = documents.some(d => d.base64Image);
+    // ── Build prompt & call LLM ────────────────────────────────────────────────
+    const { system, userPrompt, analysisMode, effectiveCTC } = buildPrompt(limitedDocs, claimedCTC);
+    const hasImage = limitedDocs.some(d => d.base64Image);
 
     let result;
 
     if (hasImage) {
       const blocks = [];
-      for (const doc of documents) {
+      for (const doc of limitedDocs) {
         if (doc.base64Image) {
           blocks.push({ type: "image_url", image_url: { url: `data:${doc.imageMediaType};base64,${doc.base64Image}` } });
           blocks.push({ type: "text", text: `Image: ${doc.fileName}` });
         } else if (doc.text) {
-          blocks.push({ type: "text", text: `--- ${doc.fileName} [${doc.detectedType}] ---\n${doc.text.slice(0,4000)}` });
+          blocks.push({ type: "text", text: `--- ${doc.fileName} [${doc.detectedType}] ---\n${doc.text}` });
         }
       }
       blocks.push({ type: "text", text: `\nReturn JSON per schema:\n${system.split("REQUIRED JSON SCHEMA:")[1]||""}` });
@@ -688,7 +719,11 @@ exports.handler = async (event) => {
         }),
       });
       if (!vRes.ok) {
-        result = await groq([{ role: "system", content: system }, { role: "user", content: "[Image]\n" + userPrompt }], true, 3000);
+        // Fall back to text model with image placeholder
+        result = await groqWithRetry([
+          { role: "system", content: system },
+          { role: "user", content: "[IMAGE — analyze based on filename and other docs]\n" + userPrompt }
+        ], true, 3000);
       } else {
         const vd = await vRes.json();
         const ct = vd.choices?.[0]?.message?.content ?? "{}";
@@ -696,34 +731,46 @@ exports.handler = async (event) => {
         result = m ? JSON.parse(m[0]) : JSON.parse(ct);
       }
     } else {
-      const isMulti = analysisMode === "multi_rank";
-      const tokenLimit = isMulti ? 3500 : analysisMode === "ctc_verification" ? 3000 : 2500;
-      result = await groqWithRetry([{ role: "system", content: system }, { role: "user", content: userPrompt }], true, tokenLimit);
+      const isMulti   = analysisMode === "multi_rank";
+      const isFull    = analysisMode === "full_analysis";
+      const tokenLimit = isMulti ? 3500 : isFull ? 3500 : analysisMode === "ctc_verification" ? 3000 : 2500;
+      result = await groqWithRetry(
+        [{ role: "system", content: system }, { role: "user", content: userPrompt }],
+        true, tokenLimit
+      );
     }
 
     if (!result.type) result.type = analysisMode;
 
-    // ── Attach server-computed CTC inflation for salary docs ──────────────────
+    // ── Attach server-computed CTC inflation for salary docs ───────────────────
     if (effectiveCTC) {
-      const salDoc = documents.find(d => d.detectedType === "salary" || d.detectedType === "bank");
+      const salDoc = limitedDocs.find(d => d.detectedType === "salary");
       if (salDoc) {
         const gross = extractAmt(salDoc.text,"Gross Earnings","Total Earnings","Gross Salary","Gross");
         const basic = extractAmt(salDoc.text,"Basic Salary","Basic Pay","Basic");
         if (gross) {
-          const empPF  = basic ? Math.min(basic*0.12,1800) : 1800;
-          const grat   = basic ? basic*0.0481 : 0;
+          const empPF   = basic ? Math.min(basic*0.12,1800) : 1800;
+          const grat    = basic ? basic*0.0481 : 0;
           const derived = Math.round((gross+empPF+grat)*12);
           const claimed = effectiveCTC < 500 ? effectiveCTC*100000 : effectiveCTC;
-          const pct = Math.round(((claimed-derived)/derived)*1000)/10;
-          const obj = {
+          const pct     = Math.round(((claimed-derived)/derived)*1000)/10;
+          const obj     = {
             derived_annual_ctc: derived, claimed_ctc_annual: claimed, inflation_percent: pct,
             verdict: Math.abs(pct)<=15?"NORMAL":pct>30?"HIGHLY_INFLATED":"INFLATED"
           };
-          if (result.salary_check) result.salary_check.ctc_inflation = obj;
-          else result.ctc_inflation = obj;
+          if (result.salary_check)                      result.salary_check.ctc_inflation = obj;
+          else if (result.ctc_check?.salary_slip)       result.ctc_check.salary_slip.server_ctc = obj;
+          else                                          result.ctc_inflation = obj;
         }
       }
     }
+
+    // ── Attach metadata ────────────────────────────────────────────────────────
+    result._meta = {
+      docs_analyzed: limitedDocs.length,
+      docs_dropped: droppedCount,
+      analysis_mode: analysisMode,
+    };
 
     return {
       statusCode: 200,
@@ -736,7 +783,7 @@ exports.handler = async (event) => {
     return {
       statusCode: 500,
       headers: { ...CORS, "Content-Type": "application/json" },
-      body: JSON.stringify({ error: err.message || "Internal error" })
+      body: JSON.stringify({ error: err.message || "Internal server error", code: "INTERNAL_ERROR" })
     };
   }
 };
