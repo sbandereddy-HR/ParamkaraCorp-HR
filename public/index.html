@@ -591,13 +591,18 @@ function getResumeCtx() {
   return null;
 }
 function getAllResumesCtx() {
-  // Current docs
-  const fromDocs = docs.filter(d=>d.detectedType==='resume');
-  if (fromDocs.length>0) return fromDocs.map(d=>({text:d.text,fileName:d.fileName}));
-  // History
-  const found=[];
-  for (const h of history) if(h._resumeText) found.push({text:h._resumeText,fileName:h._resumeFileName||'resume.pdf'});
-  return found;
+  // Current docs first
+  const fromDocs = docs.filter(d => d.detectedType === 'resume');
+  if (fromDocs.length > 0) return fromDocs.map(d => ({ text: d.text, fileName: d.fileName }));
+
+  // History — prefer _allResumes, fall back to _resumeText
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i]._allResumes && history[i]._allResumes.length > 0)
+      return history[i]._allResumes;
+    if (history[i]._resumeText)
+      return [{ text: history[i]._resumeText, fileName: history[i]._resumeFileName || 'resume.pdf' }];
+  }
+  return [];
 }
 
 // ── Send / analyze flow ───────────────────────────────────────────────────────
@@ -669,12 +674,9 @@ async function callAgent(docList, claimedCTC, userMsg) {
   if (busy) return;
   busy=true;
   document.getElementById('send-btn').disabled=true;
-
   if (userMsg) addMsg('user',userMsg);
   history.push({role:'user',content:userMsg||'analyze'});
-
   addTyping(); setStatus('Analyzing…');
-
   try {
     const payload=docList.map(d=>({
       id:d.id, fileName:d.fileName,
@@ -682,32 +684,32 @@ async function callAgent(docList, claimedCTC, userMsg) {
       detectedType:d.detectedType,
       ...(d.base64Image?{base64Image:d.base64Image,imageMediaType:d.imageMediaType}:{})
     }));
-
     const res=await fetch('/.netlify/functions/agent',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({documents:payload,history:history.slice(-6),claimedCTC,mode:mode!=='auto'?mode:undefined})
     });
-
     if(!res.ok) throw new Error('Server '+res.status);
     const data=await res.json();
     removeTyping();
-
     if(data.error) {
       addMsg('agent','⚠️ '+data.error);
     } else {
-      // Store resume text for follow-up JD pastes
-      const resumeDoc=docList.find(d=>d.detectedType==='resume');
-      if(resumeDoc) history[history.length-1]._resumeText=resumeDoc.text, history[history.length-1]._resumeFileName=resumeDoc.fileName;
-      // Also store all resumes for multi
+      // FIX 1: always store ALL resumes (works for 1 or many)
       const allResumes=docList.filter(d=>d.detectedType==='resume');
-      if(allResumes.length>1) history[history.length-1]._allResumes=allResumes.map(r=>({text:r.text,fileName:r.fileName}));
-
+      if (allResumes.length>0) {
+        history[history.length-1]._allResumes=allResumes.map(r=>({text:r.text,fileName:r.fileName}));
+        history[history.length-1]._resumeText=allResumes[0].text;
+        history[history.length-1]._resumeFileName=allResumes[0].fileName;
+      }
       addMsg('agent', bub=>renderResult(data,bub));
       history.push({role:'assistant',content:summarize(data)});
+      // FIX 2: prompt user to paste JD after multi-resume no-JD analysis
+      if (data.type==='multi_resume_nojd') {
+        addMsg('agent', `📋 **${data.candidates?.length || ''} resumes analysed.** Paste or type a **Job Description** below — I'll rank all candidates with skill scores instantly.`);
+      }
     }
   } catch(e) { removeTyping(); addMsg('agent','⚠️ '+e.message); }
-
   busy=false;
   document.getElementById('send-btn').disabled=false;
   setStatus('Ready');
@@ -726,7 +728,7 @@ function renderResult(data, bub) {
   else if (t==='jd_only')     bub.innerHTML=renderJDOnly(data);
   else if (t==='combined')    bub.innerHTML=renderJD(data.jd_match||data)+'<div style="margin:10px 0 6px;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--font-head)">── Employment Check ──</div>'+renderEmployment(data.employment_check||{});
   else if (data.scorecard||data.skill_match) bub.innerHTML=renderJD(data);
-  else if (t === 'multi_resume_nojd') bub.innerHTML = header + renderMultiResumeNoJD(data);
+  else if (t === 'multi_resume_nojd') bub.innerHTML = renderMultiResumeNoJD(data);
   else bub.innerHTML=md(data.reply||JSON.stringify(data,null,2));
 }
 
