@@ -37,25 +37,32 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .tb-new{padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:.72rem;color:var(--muted2);cursor:pointer;font-family:var(--font-body);transition:all .15s}
 .tb-new:hover{background:var(--bg3);color:var(--text);border-color:var(--green)}
 
+/* ── Session progress bar ── */
+#session-bar{display:none;padding:8px 20px;background:#ffffff;border-bottom:1px solid var(--border);flex-shrink:0}
+#session-bar.show{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.sb-step{display:flex;align-items:center;gap:5px;font-size:.7rem;padding:3px 10px;border-radius:14px;border:1px solid var(--border2);color:var(--muted);background:var(--bg2);transition:all .2s}
+.sb-step.done{background:var(--green-dim);border-color:rgba(13,115,119,0.35);color:var(--green)}
+.sb-step.active{background:var(--amber-dim);border-color:rgba(196,124,0,0.3);color:var(--amber);font-weight:600}
+.sb-step.pending{opacity:.45}
+.sb-sep{font-size:.65rem;color:var(--muted)}
+.sb-badge{font-size:.6rem;padding:1px 5px;border-radius:8px;font-weight:700;font-family:var(--font-mono);background:var(--green);color:#fff;margin-left:2px}
+
 /* ── Layout ── */
 #shell{flex:1;display:flex;overflow:hidden}
-
-/* sidebar removed — auto-detect handles everything */
-
-/* ── Main ── */
 #main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 
 /* ── Welcome ── */
 #welcome{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 24px;text-align:center}
 .wl-title{font-family:var(--font-head);font-size:2.2rem;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
 .wl-title em{font-style:normal;color:var(--green)}
-.wl-sub{font-size:.88rem;color:var(--muted2);margin-bottom:32px;max-width:420px;line-height:1.6}
-.wl-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:560px;width:100%}
-.wl-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;text-align:left;transition:all .18s var(--ease)}
-.wl-card:hover{border-color:rgba(13,115,119,0.45);transform:translateY(-2px);box-shadow:0 8px 20px rgba(13,115,119,0.12)}
-.wl-card-icon{font-size:1.3rem;margin-bottom:8px}
-.wl-card-title{font-family:var(--font-head);font-size:.82rem;font-weight:700;margin-bottom:3px}
-.wl-card-desc{font-size:.73rem;color:var(--muted2);line-height:1.5}
+.wl-sub{font-size:.88rem;color:var(--muted2);margin-bottom:10px;max-width:440px;line-height:1.6}
+.wl-start{margin:18px 0 28px;padding:11px 28px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:.88rem;font-weight:700;font-family:var(--font-head);cursor:pointer;transition:all .18s;letter-spacing:.02em}
+.wl-start:hover{background:#0a9499;box-shadow:0 0 14px rgba(13,115,119,0.35)}
+.wl-flow{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;max-width:520px;width:100%;margin-top:8px}
+.wl-step{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:left}
+.wl-step-num{font-family:var(--font-mono);font-size:.65rem;color:var(--green);font-weight:700;margin-bottom:5px}
+.wl-step-title{font-family:var(--font-head);font-size:.8rem;font-weight:700;margin-bottom:3px}
+.wl-step-desc{font-size:.71rem;color:var(--muted2);line-height:1.5}
 
 /* ── Chat area ── */
 #chat-area{flex:1;overflow-y:auto;display:flex;flex-direction:column}
@@ -69,7 +76,7 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .av{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:700;flex-shrink:0;margin-top:2px;font-family:var(--font-head)}
 .av.agent{background:var(--bg3);border:1px solid rgba(13,115,119,0.2);color:var(--green)}
 .av.user{background:var(--green-d);color:#fff}
-.bubble{max-width:78%;padding:10px 14px;border-radius:var(--r);font-size:.84rem;line-height:1.65}
+.bubble{max-width:82%;padding:10px 14px;border-radius:var(--r);font-size:.84rem;line-height:1.65}
 .bubble.agent{background:#ffffff;border:1px solid var(--border2);border-radius:3px 10px 10px 10px;color:var(--text);box-shadow:0 1px 4px rgba(13,115,119,0.08)}
 .bubble.user{background:linear-gradient(135deg,#0d7377,#084d50);color:#fff;border-radius:10px 3px 10px 10px}
 .typing-row{display:flex;gap:9px}
@@ -93,6 +100,28 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .ct-unknown{background:var(--bg3);color:var(--muted)}
 .chip-x{cursor:pointer;opacity:.5;margin-left:2px;transition:opacity .15s}
 .chip-x:hover{opacity:1}
+
+/* ── Action hint bar (context-sensitive) ── */
+#action-bar{display:none;align-items:center;gap:10px;padding:9px 18px;background:rgba(13,115,119,0.05);border-top:1px solid rgba(13,115,119,0.15);flex-shrink:0;flex-wrap:wrap}
+#action-bar.show{display:flex}
+.ab-icon{font-size:1rem;flex-shrink:0}
+.ab-text{flex:1;font-size:.75rem;color:var(--muted2);min-width:160px}
+.ab-text strong{color:var(--text)}
+.ab-btn{padding:6px 14px;border:none;border-radius:7px;font-size:.74rem;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap;transition:all .15s}
+.ab-btn-primary{background:var(--green);color:#fff}
+.ab-btn-primary:hover{background:#0a9499}
+.ab-btn-secondary{background:var(--bg3);color:var(--muted2);border:1px solid var(--border2)}
+.ab-btn-secondary:hover{color:var(--text);border-color:var(--green)}
+
+/* ── CTC prompt bar ── */
+#ctc-bar{display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(196,124,0,0.06);border-top:1px solid rgba(196,124,0,0.2);flex-shrink:0}
+#ctc-bar.show{display:flex}
+.ctc-bar-label{font-size:.76rem;color:var(--muted2);white-space:nowrap}
+.ctc-bar-label strong{color:var(--amber)}
+#ctc-input{flex:1;background:var(--bg3);border:1px solid rgba(245,166,35,0.3);border-radius:7px;padding:6px 12px;color:var(--text);font-size:.82rem;outline:none;font-family:var(--font-body)}
+#ctc-input:focus{border-color:var(--amber)}
+#ctc-submit{padding:6px 16px;background:var(--amber);color:#fff;border:none;border-radius:7px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap}
+#ctc-submit:hover{background:#f5c518}
 
 /* ── Pending panel ── */
 #pending{display:none;align-items:center;gap:10px;padding:8px 18px;background:rgba(13,115,119,0.06);border-top:1px solid rgba(13,115,119,0.18);flex-shrink:0}
@@ -125,12 +154,8 @@ input[type=file]{display:none}
 .drop-box h3{font-family:var(--font-head);font-size:1.1rem;font-weight:700;margin-bottom:6px}
 .drop-box p{font-size:.8rem;color:var(--muted2)}
 
-/* ══════════════════════════════════════════════════
-   RESULT CARDS — clean, table-first design
-══════════════════════════════════════════════════ */
+/* ══ RESULT CARDS ══════════════════════════════════════════════════ */
 .result-section{margin-top:4px}
-
-/* Verdict hero */
 .verdict-hero{display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:8px}
 .score-ring-wrap{position:relative;width:64px;height:64px;flex-shrink:0}
 .score-ring-wrap svg{width:64px;height:64px;transform:rotate(-90deg)}
@@ -144,14 +169,10 @@ input[type=file]{display:none}
 .vb-red{background:var(--red-dim);color:var(--red);border-color:rgba(255,71,87,0.3)}
 .verdict-reason{font-size:.77rem;color:var(--muted2);line-height:1.5}
 .verdict-meta{font-size:.68rem;color:var(--muted);margin-top:3px}
-
-/* Card wrapper */
 .rcard{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
 .rcard-head{padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .rcard-title{font-size:.65rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted2);font-family:var(--font-head)}
 .rcard-body{padding:12px 14px}
-
-/* Skill table */
 .skill-table{width:100%;border-collapse:collapse}
 .skill-table th{padding:6px 12px;text-align:left;font-size:.63rem;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border)}
 .skill-table th:not(:first-child){text-align:center}
@@ -168,8 +189,6 @@ input[type=file]{display:none}
 .skill-bar-cell{width:80px}
 .skill-bar-track{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
 .skill-bar-fill{height:100%;border-radius:2px}
-
-/* Candidate ranking table */
 .rank-table{width:100%;border-collapse:collapse}
 .rank-table th{padding:7px 12px;text-align:left;font-size:.63rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.07em;border-bottom:1px solid var(--border2);background:var(--bg3)}
 .rank-table td{padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:.78rem;vertical-align:middle}
@@ -179,29 +198,13 @@ input[type=file]{display:none}
 .rn-2{background:rgba(100,100,100,0.1);color:#606060}
 .rn-3{background:rgba(160,90,20,0.1);color:#8b5a14}
 .rn-other{background:var(--bg3);color:var(--muted)}
-
-/* Check rows */
 .check-list{display:flex;flex-direction:column;gap:5px}
 .check-item{display:flex;align-items:flex-start;gap:8px;font-size:.77rem;color:var(--muted2);line-height:1.5}
 .ci-icon{width:16px;height:16px;flex-shrink:0;margin-top:1px}
-
-/* Flag list */
 .flag-list{display:flex;flex-direction:column;gap:5px}
 .flag-item{display:flex;gap:7px;align-items:flex-start;font-size:.77rem;color:var(--muted2);line-height:1.5}
 .flag-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px}
 .fd-red{background:var(--red)}.fd-green{background:var(--green)}.fd-amber{background:var(--amber)}
-  
-/* ── CTC prompt bar ── */
-#ctc-bar{display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(196,124,0,0.06);border-top:1px solid rgba(196,124,0,0.2);flex-shrink:0}
-#ctc-bar.show{display:flex}
-.ctc-bar-label{font-size:.76rem;color:var(--muted2);white-space:nowrap}
-.ctc-bar-label strong{color:var(--amber)}
-#ctc-input{flex:1;background:var(--bg3);border:1px solid rgba(245,166,35,0.3);border-radius:7px;padding:6px 12px;color:var(--text);font-size:.82rem;outline:none;font-family:var(--font-body)}
-#ctc-input:focus{border-color:var(--amber)}
-#ctc-submit{padding:6px 16px;background:var(--amber);color:#fff;border:none;border-radius:7px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap}
-#ctc-submit:hover{background:#f5c518}
-
-/* ── CTC verification result cards ── */
 .ctc-source-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
 .ctc-source-head{padding:9px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .ctc-source-title{font-size:.65rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted2);font-family:var(--font-head)}
@@ -210,23 +213,17 @@ input[type=file]{display:none}
 .ctc-stat{background:var(--bg3);border-radius:6px;padding:9px 11px}
 .ctc-stat-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
 .ctc-stat-val{font-size:.88rem;font-weight:700;font-family:var(--font-head)}
-.inf-normal{color:var(--green)} .inf-inflated{color:var(--amber)} .inf-high{color:var(--red)}
-  
-/* CTC box */
+.inf-normal{color:var(--green)}.inf-inflated{color:var(--amber)}.inf-high{color:var(--red)}
 .ctc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
 .ctc-item{background:var(--bg3);border-radius:7px;padding:9px 11px}
 .ctc-label{font-size:.62rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
 .ctc-val{font-size:.9rem;font-weight:700;font-family:var(--font-head)}
-
-/* Bar rows */
 .bar-rows{display:flex;flex-direction:column;gap:5px}
 .bar-row{display:flex;align-items:center;gap:8px}
 .bar-label{font-size:.73rem;color:var(--muted);width:110px;flex-shrink:0;text-transform:capitalize}
 .bar-track{flex:1;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
 .bar-fill{height:100%;border-radius:2px}
 .bar-val{font-size:.7rem;color:var(--muted2);width:24px;text-align:right;font-family:var(--font-mono)}
-
-/* Strengths/gaps grid */
 .sg-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .sg-card{border-radius:8px;overflow:hidden}
 .sg-head{padding:6px 11px;font-size:.63rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-family:var(--font-head)}
@@ -234,6 +231,10 @@ input[type=file]{display:none}
 .sg-r-head{background:rgba(255,71,87,0.06);color:var(--red);border-bottom:1px solid rgba(255,71,87,0.1)}
 .sg-body{padding:9px 11px;background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;display:flex;flex-direction:column;gap:5px}
 .sg-item{font-size:.74rem;color:var(--muted2);display:flex;gap:5px;align-items:flex-start;line-height:1.4}
+
+/* ── Next-step prompt card ── */
+.next-step-card{margin-top:8px;padding:12px 14px;background:var(--amber-dim);border:1px solid rgba(196,124,0,0.2);border-radius:8px;font-size:.78rem;color:var(--amber)}
+.next-step-card strong{color:var(--text)}
 </style>
 </head>
 <body>
@@ -247,38 +248,48 @@ input[type=file]{display:none}
   <button class="tb-new" onclick="newSession()">+ New Session</button>
 </div>
 
+<!-- Session progress bar -->
+<div id="session-bar">
+  <span class="sb-step" id="step-resume">📄 Resume</span>
+  <span class="sb-sep">›</span>
+  <span class="sb-step" id="step-docs">📂 Documents</span>
+  <span class="sb-sep">›</span>
+  <span class="sb-step" id="step-done">✓ Results</span>
+</div>
+
 <div id="shell">
-<!-- Main -->
 <div id="main">
-  <!-- Welcome -->
+
+  <!-- Welcome screen -->
   <div id="welcome">
     <div class="wl-title">Paramkara<em>Corp</em></div>
-    <div class="wl-sub">Upload HR documents — auto-detected and analyzed instantly</div>
-    <div class="wl-cards">
-      <div class="wl-card">
-        <div class="wl-card-icon">⇌</div>
-        <div class="wl-card-title">JD vs Resume</div>
-        <div class="wl-card-desc">Skill table, years per tool, shortlist verdict</div>
+    <div class="wl-sub">AI-powered HR document intelligence — resume-first workflow, session memory</div>
+    <button class="wl-start" onclick="startSession()">⇥ Start New Session</button>
+    <div class="wl-flow">
+      <div class="wl-step">
+        <div class="wl-step-num">STEP 1 — REQUIRED</div>
+        <div class="wl-step-title">📄 Upload Resume</div>
+        <div class="wl-step-desc">Start by uploading the candidate resume. All subsequent analysis ties back to it.</div>
       </div>
-      <div class="wl-card">
-        <div class="wl-card-icon">⊞</div>
-        <div class="wl-card-title">Rank Candidates</div>
-        <div class="wl-card-desc">Upload multiple resumes + JD → ranked table</div>
+      <div class="wl-step">
+        <div class="wl-step-num">STEP 2 — OPTIONAL</div>
+        <div class="wl-step-title">📋 Paste JD</div>
+        <div class="wl-step-desc">Paste a job description to get a skill match scorecard — shortlist or reject verdict.</div>
       </div>
-      <div class="wl-card">
-        <div class="wl-card-icon">⊘</div>
-        <div class="wl-card-title">Offer Letter Check</div>
-        <div class="wl-card-desc">Fake detector — CIN, GST, red flags</div>
+      <div class="wl-step">
+        <div class="wl-step-num">STEP 2 — OPTIONAL</div>
+        <div class="wl-step-title">📜 Service History (EPFO/UAN)</div>
+        <div class="wl-step-desc">Upload EPFO passbook → auto cross-checked against resume for experience inflation.</div>
       </div>
-      <div class="wl-card">
-        <div class="wl-card-icon">₹</div>
-        <div class="wl-card-title">CTC Verification</div>
-        <div class="wl-card-desc">Salary slip / PF / bank → inflation check</div>
+      <div class="wl-step">
+        <div class="wl-step-num">STEP 2 — OPTIONAL</div>
+        <div class="wl-step-title">💰 Salary / PF / Bank / Offer</div>
+        <div class="wl-step-desc">Upload salary slips, PF statement, bank statement, or offer letter → CTC fraud detection.</div>
       </div>
     </div>
   </div>
 
-  <!-- Chat messages (hidden until first message) -->
+  <!-- Chat messages (hidden until session starts) -->
   <div id="chat-area" style="display:none;flex:1;overflow-y:auto">
     <div id="messages"></div>
   </div>
@@ -292,18 +303,26 @@ input[type=file]{display:none}
   <!-- File chips -->
   <div id="files-row"></div>
 
-  <!-- CTC prompt bar (shown when salary/pf/bank uploaded without CTC) -->
-<div id="ctc-bar">
-  <span class="ctc-bar-label">💰 <strong>Candidate CTC?</strong> Enter claimed CTC (LPA):</span>
-  <input id="ctc-input" type="number" placeholder="e.g. 12.5" step="0.1" min="0"
-    onkeydown="if(event.key==='Enter')submitCTC()"/>
-  <button id="ctc-submit" onclick="submitCTC()">Verify →</button>
-</div>
-  
+  <!-- Context-sensitive action bar -->
+  <div id="action-bar">
+    <span class="ab-icon" id="ab-icon">💡</span>
+    <span class="ab-text" id="ab-text">—</span>
+    <button class="ab-btn ab-btn-secondary" id="ab-btn-skip" onclick="dismissActionBar()" style="display:none">Skip</button>
+    <button class="ab-btn ab-btn-primary" id="ab-btn-act" onclick="actionBarClick()">→</button>
+  </div>
+
+  <!-- CTC prompt bar -->
+  <div id="ctc-bar">
+    <span class="ctc-bar-label">💰 <strong>Candidate CTC?</strong> Enter claimed CTC (LPA):</span>
+    <input id="ctc-input" type="number" placeholder="e.g. 12.5" step="0.1" min="0"
+      onkeydown="if(event.key==='Enter')submitCTC()"/>
+    <button id="ctc-submit" onclick="submitCTC()">Verify →</button>
+  </div>
+
   <!-- Input bar -->
-  <div id="input-bar">
+  <div id="input-bar" style="display:none">
     <div class="input-wrap">
-      <textarea id="txt" placeholder="Upload documents above, or ask anything…" rows="1"
+      <textarea id="txt" placeholder="Paste a Job Description, or ask anything…" rows="1"
         onkeydown="onKey(event)" oninput="autoResize(this)"></textarea>
       <div class="ib-actions">
         <button class="ib-btn" onclick="document.getElementById('file-in').click()" title="Upload files">
@@ -314,8 +333,23 @@ input[type=file]{display:none}
         </button>
       </div>
     </div>
-    <div class="ib-hint">PDF · DOCX · JPG · PNG — drag & drop anywhere · Upload all docs then click Analyze</div>
+    <div class="ib-hint" id="ib-hint">Upload resume first to begin session</div>
   </div>
+
+  <!-- Resume-first upload prompt (shown before resume uploaded) -->
+  <div id="resume-gate" style="display:none;padding:16px 18px;border-top:1px solid var(--border2);background:#ffffff">
+    <div style="display:flex;align-items:center;gap:14px;background:var(--bg2);border:1px dashed rgba(13,115,119,0.35);border-radius:10px;padding:16px 20px;cursor:pointer" onclick="document.getElementById('file-in').click()">
+      <div style="width:44px;height:44px;border-radius:10px;background:var(--green-dim);border:1px solid rgba(13,115,119,0.25);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">📄</div>
+      <div>
+        <div style="font-family:var(--font-head);font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:3px">Upload Candidate Resume to Begin</div>
+        <div style="font-size:.73rem;color:var(--muted2)">PDF · DOCX · JPG · PNG — drag & drop anywhere</div>
+      </div>
+      <div style="margin-left:auto">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      </div>
+    </div>
+  </div>
+
   <input type="file" id="file-in" accept=".pdf,.jpg,.jpeg,.png,.docx,.doc" multiple onchange="handleFiles(this.files)"/>
 </div>
 </div>
@@ -330,20 +364,30 @@ input[type=file]{display:none}
 </div>
 
 <script>
-// ── PDF.js ────────────────────────────────────────────────────────────────────
+// ── PDF.js ─────────────────────────────────────────────────────────────────────
 if (typeof pdfjsLib !== 'undefined')
   pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let docs       = [];
-let history    = [];
-let busy       = false;
-let started    = false;
-let pendingCnt = 0;
+// ══════════════════════════════════════════════════════════════════════════════
+//  SESSION STATE
+// ══════════════════════════════════════════════════════════════════════════════
+let session = {
+  started: false,
+  resumeUploaded: false,           // resume confirmed in session
+  resumeDoc: null,                 // { text, fileName } — persisted across turns
+  history: [],                     // conversation history
+};
+
+let docs           = [];           // staged docs (queued for analysis)
+let busy           = false;
+let pendingCnt     = 0;
 let pendingCTCDocs = [];
 let pendingEPFODocs = [];
-  
-// ── Doc type detector ─────────────────────────────────────────────────────────
+let actionBarAction = null;        // callback for action bar button
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  DOC TYPE DETECTOR
+// ══════════════════════════════════════════════════════════════════════════════
 function detectType(text, fileName) {
   const t = (text || '').toLowerCase();
   const f = (fileName || '').toLowerCase();
@@ -391,6 +435,8 @@ function detectType(text, fileName) {
   if (f.includes('jd') || f.includes('job'))   return 'jd';
   if (f.includes('offer'))                      return 'offer';
   if (f.includes('salary') || f.includes('payslip')) return 'salary';
+  if (f.includes('epfo') || f.includes('uan'))  return 'epfo';
+  if (f.includes('bank') || f.includes('statement')) return 'bank';
 
   return 'unknown';
 }
@@ -398,13 +444,57 @@ function detectType(text, fileName) {
 function looksLikeJD(text) {
   if (!text || text.length < 80) return false;
   const t = text.toLowerCase();
-  return ['job description','we are looking for','responsibilities','requirements','mandatory skills','good to have','key responsibilities','role overview','experience required','skills required'].filter(s=>t.includes(s)).length >= 2;
+  return ['job description','we are looking for','responsibilities','requirements',
+          'mandatory skills','good to have','key responsibilities','role overview',
+          'experience required','skills required'].filter(s=>t.includes(s)).length >= 2;
 }
-  
-// ── ADD: CTC bar helpers ──────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SESSION PROGRESS UI
+// ══════════════════════════════════════════════════════════════════════════════
+function updateSessionBar() {
+  if (!session.started) { document.getElementById('session-bar').classList.remove('show'); return; }
+  document.getElementById('session-bar').classList.add('show');
+
+  const sResume = document.getElementById('step-resume');
+  const sDocs   = document.getElementById('step-docs');
+  const sDone   = document.getElementById('step-done');
+
+  // Reset
+  [sResume, sDocs, sDone].forEach(s => { s.className = 'sb-step pending'; });
+
+  if (!session.resumeUploaded) {
+    sResume.className = 'sb-step active';
+  } else {
+    sResume.className = 'sb-step done';
+    sResume.innerHTML = '✓ Resume <span class="sb-badge">✓</span>';
+    sDocs.className = 'sb-step active';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  ACTION BAR (context-aware nudges)
+// ══════════════════════════════════════════════════════════════════════════════
+function showActionBar(icon, text, btnLabel, cb, showSkip = false) {
+  document.getElementById('ab-icon').textContent = icon;
+  document.getElementById('ab-text').innerHTML   = text;
+  document.getElementById('ab-btn-act').textContent = btnLabel;
+  document.getElementById('ab-btn-skip').style.display = showSkip ? '' : 'none';
+  actionBarAction = cb;
+  document.getElementById('action-bar').classList.add('show');
+}
+function hideActionBar() {
+  document.getElementById('action-bar').classList.remove('show');
+  actionBarAction = null;
+}
+function dismissActionBar() { hideActionBar(); }
+function actionBarClick() { if (actionBarAction) actionBarAction(); hideActionBar(); }
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CTC BAR
+// ══════════════════════════════════════════════════════════════════════════════
 function showCTCBar() { document.getElementById('ctc-bar').classList.add('show'); document.getElementById('ctc-input').focus(); }
 function hideCTCBar() { document.getElementById('ctc-bar').classList.remove('show'); document.getElementById('ctc-input').value=''; }
-
 function submitCTC() {
   const val = parseFloat(document.getElementById('ctc-input').value);
   if (!val || val <= 0) { document.getElementById('ctc-input').style.borderColor='var(--red)'; return; }
@@ -415,8 +505,10 @@ function submitCTC() {
   addMsg('user', `💰 Claimed CTC: ₹${val} LPA`);
   callAgent(snap, ctcInRupees);
 }
-  
-// ── File extraction ───────────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  FILE EXTRACTION
+// ══════════════════════════════════════════════════════════════════════════════
 async function extractPDF(file) {
   try {
     const buf = await file.arrayBuffer();
@@ -430,7 +522,6 @@ async function extractPDF(file) {
     return out.trim().length > 30 ? out.trim() : '[Scanned PDF — no text layer]';
   } catch(e) { return '[PDF error: '+e.message+']'; }
 }
-
 async function extractDOCX(file) {
   try {
     const buf = await file.arrayBuffer();
@@ -439,23 +530,25 @@ async function extractDOCX(file) {
     return xml.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').trim().slice(0,15000);
   } catch(e) { return '[DOCX error: '+e.message+']'; }
 }
-
 async function toBase64(file) {
   return new Promise(r=>{const fr=new FileReader();fr.onload=()=>r(fr.result.split(',')[1]);fr.readAsDataURL(file);});
 }
 
-// ── Handle uploaded files ─────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  HANDLE UPLOADED FILES — the core routing logic
+// ══════════════════════════════════════════════════════════════════════════════
 async function handleFiles(fileList) {
   if (busy) return;
   const files = Array.from(fileList);
   if (!files.length) return;
+
   pendingCnt += files.length;
   updatePending();
   setStatus('Reading…');
 
   await Promise.all(files.map(async file => {
-    if (docs.find(d=>d.fileName===file.name)) { pendingCnt--; updatePending(); return; }
-    const id = 'doc_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
+    if (docs.find(d => d.fileName === file.name)) { pendingCnt--; updatePending(); return; }
+    const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
     renderChip({id, fileName:file.name, type:'unknown', loading:true});
 
     let text='', b64=null;
@@ -478,27 +571,386 @@ async function handleFiles(fileList) {
     pendingCnt--;
     updatePending();
   }));
-  
+
   document.getElementById('file-in').value='';
-
-  // Check if we now have EPFO + resume combo — fire auto-analysis
-  checkEPFOResumeCombo();
+  await routeUploadedDocs();
 }
 
-// ── EPFO + Resume auto-combine (was dead code — now called properly) ──────────
-function checkEPFOResumeCombo() {
-  if (pendingEPFODocs.length === 0) return;
-  const hasResume = docs.some(d => d.detectedType === 'resume');
-  if (!hasResume) return;
-  const snap = [...pendingEPFODocs];
-  pendingEPFODocs = [];
-  const resumeDocs = docs.filter(d => d.detectedType === 'resume');
-  docs = docs.filter(d => d.detectedType !== 'resume');
+// ══════════════════════════════════════════════════════════════════════════════
+//  ROUTING — decides what to do after files are read
+// ══════════════════════════════════════════════════════════════════════════════
+async function routeUploadedDocs() {
+  if (pendingCnt > 0) return; // still reading
+  if (docs.length === 0)      return;
+
+  const types = docs.map(d => d.detectedType);
+
+  // ── CASE 1: Resume detected and no resume yet in session ──────────────────
+  const resumeDoc = docs.find(d => d.detectedType === 'resume');
+  if (resumeDoc && !session.resumeUploaded) {
+    // Confirm the resume and remove it from the staging queue
+    docs = docs.filter(d => d.id !== resumeDoc.id);
+    removeChip(resumeDoc.id);
+
+    session.resumeDoc  = { text: resumeDoc.text, fileName: resumeDoc.fileName, id: resumeDoc.id };
+    session.resumeUploaded = true;
+    updateSessionBar();
+
+    if (!session.started) startChat();
+
+    // Run gap analysis on the resume immediately
+    addMsg('user', `📄 Analyze: ${resumeDoc.fileName}`);
+    session.history.push({ role:'user', content:'Resume uploaded: '+resumeDoc.fileName });
+    await callAgent([resumeDoc], null, null); // null = we already added the user msg
+
+    // After analysis — show action-bar nudge for next steps
+    showPostResumeNudge();
+
+    // If other docs were uploaded alongside — process them now
+    if (docs.length > 0) {
+      await routeUploadedDocs();
+    }
+    return;
+  }
+
+  // ── CASE 2: Resume uploaded but session.resumeDoc already set — treat as
+  //    additional resume (multi-candidate). Keep queued for Analyze button.
+  if (resumeDoc && session.resumeUploaded) {
+    // stays in docs[] for multi-candidate flow — handled by runAnalysis()
+    updatePending();
+    return;
+  }
+
+  // ── CASE 3: No resume yet — block everything and ask for resume first ─────
+  if (!session.resumeUploaded) {
+    const nonResume = docs.filter(d => d.detectedType !== 'resume');
+    if (nonResume.length > 0) {
+      addMsg('agent',
+        '⚠️ **Start with the candidate resume first.**\n\n' +
+        'I detected: **' + nonResume.map(d => d.detectedType + ' (' + d.fileName + ')').join(', ') + '**\n\n' +
+        'Please upload the **candidate resume** — once I have it, I\'ll automatically process these documents against it.');
+      return;
+    }
+    return;
+  }
+
+  // ── CASE 4: Has resume in session — route each doc type ──────────────────
+  // Separate types
+  const jdDocs      = docs.filter(d => d.detectedType === 'jd');
+  const epfoDocs    = docs.filter(d => d.detectedType === 'epfo');
+  const ctcDocs     = docs.filter(d => ['salary','bank'].includes(d.detectedType));
+  const offerDocs   = docs.filter(d => d.detectedType === 'offer');
+  const otherDocs   = docs.filter(d => !['jd','epfo','salary','bank','offer'].includes(d.detectedType));
+
+  // ── EPFO: auto-combine with session resume ──────────────────────────────
+  if (epfoDocs.length > 0) {
+    const snap = [...epfoDocs];
+    docs = docs.filter(d => !epfoDocs.find(e => e.id === d.id));
+    snap.forEach(d => removeChip(d.id));
+    const resumeAsDoc = { ...session.resumeDoc, detectedType:'resume' };
+    const userMsg = `📜 EPFO Service History uploaded — cross-checking against ${session.resumeDoc.fileName}`;
+    addMsg('user', userMsg);
+    await callAgent([...snap, resumeAsDoc], null, null);
+    hideActionBar();
+    updatePending();
+    return;
+  }
+
+  // ── Offer letter: fire immediately ────────────────────────────────────────
+  if (offerDocs.length > 0) {
+    const snap = [...offerDocs];
+    docs = docs.filter(d => !offerDocs.find(o => o.id === d.id));
+    snap.forEach(d => removeChip(d.id));
+    const userMsg = `📩 Offer Letter — checking authenticity…`;
+    addMsg('user', userMsg);
+    await callAgent(snap, null, null);
+    hideActionBar();
+    updatePending();
+    return;
+  }
+
+  // ── CTC docs (salary/pf/bank): need claimed CTC → show CTC bar ───────────
+  if (ctcDocs.length > 0 || docs.filter(d => d.detectedType === 'epfo').length > 0) {
+    // (epfo handled above; only salary/bank reach here)
+    if (ctcDocs.length > 0) {
+      pendingCTCDocs = [...ctcDocs, { ...session.resumeDoc, detectedType:'resume' }];
+      docs = docs.filter(d => !ctcDocs.find(c => c.id === d.id));
+      ctcDocs.forEach(d => removeChip(d.id));
+      addMsg('agent',
+        '💰 **Salary/bank document(s) detected:** ' + ctcDocs.map(d => d.fileName).join(', ') + '\n\n' +
+        'To verify CTC inflation, enter the candidate\'s **claimed CTC** (LPA) below ↓');
+      showCTCBar();
+      hideActionBar();
+      updatePending();
+      return;
+    }
+  }
+
+  // ── JD docs: match against session resume ─────────────────────────────────
+  if (jdDocs.length > 0) {
+    const snap = [...jdDocs];
+    docs = docs.filter(d => !jdDocs.find(j => j.id === d.id));
+    snap.forEach(d => removeChip(d.id));
+    const resumeAsDoc = { ...session.resumeDoc, detectedType:'resume' };
+    const userMsg = snap.length > 1 ? `📋 JD + ${snap.length} docs — matching against resume…` : `📋 JD uploaded — matching against ${session.resumeDoc.fileName}…`;
+    addMsg('user', userMsg);
+    await callAgent([...snap, resumeAsDoc], null, null);
+    hideActionBar();
+    updatePending();
+    return;
+  }
+
+  // ── Remaining/unknown docs: queue for Analyze button ─────────────────────
+  updatePending();
+}
+
+function showPostResumeNudge() {
+  showActionBar(
+    '💡',
+    '<strong>Resume analyzed.</strong> What next? Upload salary slips, PF, EPFO, offer letter — or paste a <strong>Job Description</strong> below.',
+    'Upload Docs',
+    () => document.getElementById('file-in').click(),
+    true
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CHAT UI
+// ══════════════════════════════════════════════════════════════════════════════
+function startSession() {
+  document.getElementById('welcome').style.display = 'none';
+  document.getElementById('resume-gate').style.display = '';
+  session.started = true;
+  updateSessionBar();
+}
+
+function startChat() {
+  if (!session.started) {
+    document.getElementById('welcome').style.display = 'none';
+    session.started = true;
+  }
+  document.getElementById('resume-gate').style.display = 'none';
+  document.getElementById('chat-area').style.display = 'flex';
+  document.getElementById('chat-area').style.flexDirection = 'column';
+  document.getElementById('input-bar').style.display = '';
+  document.getElementById('ib-hint').textContent = 'Paste JD · Upload more docs · Ask anything';
+  updateSessionBar();
+}
+
+function showChat() {
+  if (session.started && !document.getElementById('chat-area').style.display?.includes('flex')) {
+    startChat();
+  }
+}
+
+function addMsg(role, content) {
+  showChat();
+  const container = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+  const initials = role==='agent' ? 'P' : 'HR';
+  row.innerHTML = `<div class="av ${role}">${initials}</div><div class="bubble ${role}"></div>`;
+  container.appendChild(row);
+  const bub = row.querySelector('.bubble');
+  if (typeof content === 'string') bub.innerHTML = md(content);
+  else content(bub);
+  document.getElementById('chat-area').scrollTop = 99999;
+  return bub;
+}
+function addTyping() {
+  showChat();
+  const c = document.getElementById('messages');
+  const row = document.createElement('div');
+  row.className = 'typing-row'; row.id = 'typing';
+  row.innerHTML = `<div class="av agent">P</div><div class="typing-bub"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  c.appendChild(row);
+  document.getElementById('chat-area').scrollTop = 99999;
+}
+function removeTyping() { const el=document.getElementById('typing'); if(el) el.remove(); }
+function md(t) { return (t||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br/>'); }
+function setStatus(s) { document.getElementById('tb-status').textContent=s; }
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  SEND — handles text input / JD paste
+// ══════════════════════════════════════════════════════════════════════════════
+function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} }
+function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,112)+'px'; }
+
+async function send() {
+  if (busy) return;
+  const input = document.getElementById('txt');
+  const text  = input.value.trim();
+
+  if (!text && docs.length > 0) { runAnalysis(); return; }
+  if (!text) return;
+
+  // ── Resume not yet uploaded? ───────────────────────────────────────────────
+  if (!session.resumeUploaded) {
+    input.value = ''; autoResize(input);
+    if (!session.started) startSession();
+    addMsg('agent',
+      '⚠️ **Please upload the candidate resume first.**\n\n' +
+      'Use the 📎 button to upload the resume — then you can paste the JD or ask anything.');
+    return;
+  }
+
+  // ── JD pasted as text ─────────────────────────────────────────────────────
+  if (looksLikeJD(text)) {
+    input.value = ''; autoResize(input);
+    const jdDoc = { id:'jd_'+Date.now(), fileName:'pasted_jd.txt', text, detectedType:'jd' };
+    const resumeAsDoc = { ...session.resumeDoc, detectedType:'resume' };
+    addMsg('user', '📋 JD pasted — matching against resume…');
+    hideActionBar();
+    await callAgent([jdDoc, resumeAsDoc], null, null);
+    return;
+  }
+
+  // ── Normal conversational message ─────────────────────────────────────────
+  input.value = ''; autoResize(input);
+  addMsg('user', text);
+  session.history.push({ role:'user', content:text });
+  busy = true;
+  document.getElementById('send-btn').disabled = true;
+  addTyping(); setStatus('Thinking…');
+
+  try {
+    const res = await fetch('/.netlify/functions/agent', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ message:text, history:session.history.slice(-8), mode:undefined })
+    });
+    if (!res.ok) throw new Error('Server ' + res.status);
+    const data = await res.json();
+    removeTyping();
+    if (data.error) addMsg('agent', '⚠️ ' + data.error);
+    else { addMsg('agent', data.reply||''); session.history.push({ role:'assistant', content:data.reply||'' }); }
+  } catch(e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
+
+  busy = false;
+  document.getElementById('send-btn').disabled = false;
+  setStatus('Ready');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  RUN ANALYSIS (manual Analyze button — for multi-candidate or queued docs)
+// ══════════════════════════════════════════════════════════════════════════════
+async function runAnalysis() {
+  if (busy || docs.length === 0 || pendingCnt > 0) return;
+  const snap = [...docs];
+  docs = [];
   document.getElementById('files-row').innerHTML = '';
-  docs.forEach(d => renderChip({id: d.id, fileName: d.fileName, type: d.detectedType}));
-  const userMsg = `Resume + Service History — verifying employment…`;
-  callAgent([...snap, ...resumeDocs], null, userMsg);
+  document.getElementById('pending').classList.remove('show');
+
+  // Always inject session resume into the payload if not already present
+  const hasResume = snap.some(d => d.detectedType === 'resume');
+  const allDocs = hasResume ? snap : [...snap, { ...session.resumeDoc, detectedType:'resume' }];
+
+  const names = snap.map(d => d.fileName).join(', ');
+  addMsg('user', `Analyze ${snap.length} doc${snap.length>1?'s':''}: ${names}`);
+  await callAgent(allDocs, null, null);
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CORE API CALL
+// ══════════════════════════════════════════════════════════════════════════════
+async function callAgent(docList, claimedCTC, userMsg) {
+  if (busy) return;
+  busy = true;
+  document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = true);
+
+  if (userMsg) addMsg('user', userMsg);
+  session.history.push({ role:'user', content: userMsg || 'analyze' });
+
+  addTyping(); setStatus('Analyzing…');
+
+  try {
+    const payload = docList.map(d => ({
+      id: d.id, fileName: d.fileName,
+      text: d.base64Image ? '' : d.text,
+      detectedType: d.detectedType,
+      ...(d.base64Image ? { base64Image:d.base64Image, imageMediaType:d.imageMediaType } : {})
+    }));
+
+    const res = await fetch('/.netlify/functions/agent', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ documents:payload, history:session.history.slice(-6), claimedCTC, mode:undefined })
+    });
+
+    if (!res.ok) throw new Error('Server ' + res.status);
+    const data = await res.json();
+    removeTyping();
+
+    // ── needs_ctc signal ──────────────────────────────────────────────────
+    if (data.type === 'needs_ctc') {
+      pendingCTCDocs = docList;
+      const docNames = data.detected_docs.map(d=>`${d.fileName} (${d.detectedType})`).join(', ');
+      addMsg('agent', `📂 Detected: **${docNames}**\n\nTo verify CTC, I need the candidate\'s **claimed CTC (LPA)**. Enter it below ↓`);
+      showCTCBar();
+      busy = false;
+      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
+      setStatus('Waiting for CTC…');
+      return;
+    }
+
+    // ── needs_resume_for_epfo — shouldn't fire (we inject resume) but guard ─
+    if (data.type === 'needs_resume_for_epfo') {
+      addMsg('agent', `📋 **EPFO Service History detected** — resume is being injected, retrying…`);
+      busy = false;
+      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
+      setStatus('Ready');
+      return;
+    }
+
+    if (data.error) {
+      addMsg('agent', '⚠️ ' + data.error);
+    } else {
+      addMsg('agent', bub => renderResult(data, bub));
+      session.history.push({ role:'assistant', content: summarize(data) });
+
+      // Post-analysis nudges
+      showPostAnalysisNudge(data);
+
+      // Mark done in session bar if got a proper result
+      if (data.type && data.type !== 'conversation') {
+        document.getElementById('step-docs').className = 'sb-step done';
+        document.getElementById('step-done').className = 'sb-step done';
+        document.getElementById('step-done').textContent = '✓ Results';
+      }
+    }
+  } catch(e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
+
+  busy = false;
+  document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
+  setStatus('Ready');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  POST-ANALYSIS NUDGES
+// ══════════════════════════════════════════════════════════════════════════════
+function showPostAnalysisNudge(data) {
+  const t = data.type || '';
+  if (t === 'employment' && data.mode === 'gap_analysis') {
+    // After gap analysis — ask for JD or financial docs
+    showActionBar('💡',
+      'Gap analysis done. Upload <strong>EPFO/Service History</strong>, or paste a <strong>JD</strong> for skill matching, or upload <strong>salary / PF / bank / offer letter</strong>.',
+      'Upload Docs', () => document.getElementById('file-in').click(), true);
+  } else if (t === 'jd_resume' || t === 'multi_rank') {
+    showActionBar('💡',
+      'Skill match done. Now verify financials — upload <strong>salary slip / PF / bank statement / offer letter</strong>.',
+      'Upload Docs', () => document.getElementById('file-in').click(), true);
+  } else if (t === 'ctc_verification') {
+    showActionBar('💡',
+      'CTC check done. Upload an <strong>offer letter</strong> to verify its authenticity, or paste a <strong>JD</strong> for skill match.',
+      'Upload Docs', () => document.getElementById('file-in').click(), true);
+  } else if (t === 'offer_letter') {
+    showActionBar('💡',
+      'Offer check done. Upload <strong>salary slip / bank statement / PF</strong> to verify claimed CTC.',
+      'Upload Docs', () => document.getElementById('file-in').click(), true);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  CHIP HELPERS
+// ══════════════════════════════════════════════════════════════════════════════
 const TYPE_UI = {
   resume:{label:'RESUME',cls:'ct-resume'}, jd:{label:'JD',cls:'ct-jd'},
   offer:{label:'OFFER',cls:'ct-offer'}, salary:{label:'SALARY',cls:'ct-salary'},
@@ -508,10 +960,10 @@ const TYPE_UI = {
 
 function renderChip({id, fileName, type, loading}) {
   const row = document.getElementById('files-row');
-  const el = document.createElement('div');
-  el.className='chip'; el.id='chip_'+id;
-  const ui = TYPE_UI[type]||TYPE_UI.unknown;
-  el.innerHTML=`<span>📄</span><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fileName}</span><span class="chip-type ${ui.cls}" id="ctype_${id}">${loading?'…':ui.label}</span><span class="chip-x" onclick="removeDoc('${id}')">×</span>`;
+  const el  = document.createElement('div');
+  el.className = 'chip'; el.id = 'chip_'+id;
+  const ui = TYPE_UI[type] || TYPE_UI.unknown;
+  el.innerHTML = `<span>📄</span><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fileName}</span><span class="chip-type ${ui.cls}" id="ctype_${id}">${loading?'…':ui.label}</span><span class="chip-x" onclick="removeDoc('${id}')">×</span>`;
   row.appendChild(el);
 }
 function updateChip(id, type) {
@@ -519,281 +971,119 @@ function updateChip(id, type) {
   if(el) el.classList.remove('loading');
   if(t) { const ui=TYPE_UI[type]||TYPE_UI.unknown; t.className=`chip-type ${ui.cls}`; t.textContent=ui.label; }
 }
+function removeChip(id) { const el=document.getElementById('chip_'+id); if(el) el.remove(); }
 function removeDoc(id) {
-  docs=docs.filter(d=>d.id!==id);
-  const el=document.getElementById('chip_'+id); if(el) el.remove();
+  docs = docs.filter(d => d.id !== id);
+  removeChip(id);
   updatePending();
 }
 
-// ── Pending panel ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════════
+//  PENDING PANEL
+// ══════════════════════════════════════════════════════════════════════════════
 function updatePending() {
-  const panel=document.getElementById('pending');
-  const info=document.getElementById('pending-info');
-  const btn=document.getElementById('analyze-btn');
-  if (docs.length===0&&pendingCnt===0) { panel.classList.remove('show'); setStatus('Ready'); return; }
+  const panel = document.getElementById('pending');
+  const info  = document.getElementById('pending-info');
+  const btn   = document.getElementById('analyze-btn');
+  if (docs.length === 0 && pendingCnt === 0) { panel.classList.remove('show'); setStatus('Ready'); return; }
   panel.classList.add('show');
-  if (pendingCnt>0) { info.innerHTML=`<strong>Reading ${pendingCnt} file(s)…</strong>`; btn.disabled=true; btn.textContent='Reading…'; return; }
-
-  const types = docs.map(d=>d.detectedType);
-  const nResume = types.filter(t=>t==='resume').length;
-  const hasJD = types.includes('jd');
-  const hasSalary = types.includes('salary');
+  if (pendingCnt > 0) { info.innerHTML=`<strong>Reading ${pendingCnt} file(s)…</strong>`; btn.disabled=true; btn.textContent='Reading…'; return; }
+  const types  = docs.map(d => d.detectedType);
+  const nRes   = types.filter(t=>t==='resume').length;
+  const hasJD  = types.includes('jd');
   let desc = `<strong>${docs.length} doc${docs.length>1?'s':''} ready</strong>`;
-  if (nResume>1&&hasJD) desc+=' · Multi-candidate ranking';
-  else if (nResume===1&&hasJD) desc+=' · JD vs Resume match';
-  else if (hasSalary) desc+=' · CTC verification';
-  info.innerHTML=desc;
-  btn.disabled=false; btn.textContent='Analyze →';
+  if (nRes>1 && hasJD) desc+=' · Multi-candidate ranking';
+  else if (nRes===1 && hasJD) desc+=' · JD vs Resume match';
+  info.innerHTML = desc;
+  btn.disabled = false; btn.textContent = 'Analyze →';
   setStatus('Ready to analyze');
 }
 
-
-// ── Chat UI ───────────────────────────────────────────────────────────────────
-function showChat() {
-  if (!started) {
-    document.getElementById('welcome').style.display='none';
-    document.getElementById('chat-area').style.display='flex';
-    document.getElementById('chat-area').style.flexDirection='column';
-    started=true;
-  }
-}
-function addMsg(role, content) {
-  showChat();
-  const container=document.getElementById('messages');
-  const row=document.createElement('div');
-  row.className=`msg-row ${role}`;
-  const initials=role==='agent'?'P':'HR';
-  row.innerHTML=`<div class="av ${role}">${initials}</div><div class="bubble ${role}"></div>`;
-  container.appendChild(row);
-  const bub=row.querySelector('.bubble');
-  if (typeof content==='string') bub.innerHTML=md(content);
-  else content(bub);
-  document.getElementById('chat-area').scrollTop=99999;
-  return bub;
-}
-function addTyping() {
-  showChat();
-  const c=document.getElementById('messages');
-  const row=document.createElement('div');
-  row.className='typing-row'; row.id='typing';
-  row.innerHTML=`<div class="av agent">P</div><div class="typing-bub"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
-  c.appendChild(row);
-  document.getElementById('chat-area').scrollTop=99999;
-}
-function removeTyping() { const el=document.getElementById('typing'); if(el) el.remove(); }
-function md(t) { return (t||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br/>'); }
-function setStatus(s) { document.getElementById('tb-status').textContent=s; }
-
-// ── Resume context from history ───────────────────────────────────────────────
-function getResumeCtx() {
-  // Check current docs first
-  const r = docs.find(d=>d.detectedType==='resume');
-  if (r) return {text:r.text, fileName:r.fileName};
-  // Check history
-  for (let i=history.length-1;i>=0;i--) {
-    if (history[i]._resumeText) return {text:history[i]._resumeText, fileName:history[i]._resumeFileName||'resume.pdf'};
-  }
-  return null;
-}
-  function getAllResumesCtx() {
-  const fromDocs = docs.filter(d => d.detectedType === 'resume');
-  if (fromDocs.length > 0) return fromDocs.map(d => ({ text: d.text, fileName: d.fileName }));
-  for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i]._allResumes && history[i]._allResumes.length > 0) return history[i]._allResumes;
-    if (history[i]._resumeText) return [{ text: history[i]._resumeText, fileName: history[i]._resumeFileName || 'resume.pdf' }];
-  }
-  return [];
-}
-
-// ── Send / analyze flow ───────────────────────────────────────────────────────
-function onKey(e) { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} }
-function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.scrollHeight,112)+'px'; }
-
-async function send() {
-  if (busy) return;
-  const input = document.getElementById('txt');
-  const text = input.value.trim();
-  if (!text && docs.length === 0) return;
-  if (!text && docs.length > 0) { runAnalysis(); return; }
-
-  // JD pasted as text
-  if (looksLikeJD(text)) {
-    const resumeCtxList = getAllResumesCtx();
-    if (resumeCtxList.length === 0) {
-      input.value = ''; autoResize(input);
-      addMsg('user', '📋 JD pasted');
-      addMsg('agent', '⚠️ **No resume uploaded yet.**\n\nPlease upload the candidate resume first using the 📎 button, then paste the JD — I\'ll run the skill match automatically.');
-      return;
-    }
-    input.value = ''; autoResize(input);
-    const jdDoc = { id: 'jd_' + Date.now(), fileName: 'pasted_jd.txt', text, detectedType: 'jd' };
-    const resumeDocs = resumeCtxList.map((r, i) => ({ id: 'res_' + Date.now() + '_' + i, fileName: r.fileName, text: r.text, detectedType: 'resume' }));
-    const label = resumeDocs.length > 1 ? `📋 JD + ${resumeDocs.length} resumes — ranking candidates…` : '📋 JD detected — matching against resume…';
-    addMsg('user', label);
-    history.push({ role: 'user', content: 'JD analysis' });
-    await callAgent([jdDoc, ...resumeDocs], null);
-    return;
-  }
-
-  // Normal text message
-  input.value = ''; autoResize(input);
-  addMsg('user', text);
-  history.push({ role: 'user', content: text });
-  busy = true;
-  document.getElementById('send-btn').disabled = true;
-  addTyping(); setStatus('Thinking…');
-
-  try {
-    const res = await fetch('/.netlify/functions/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history: history.slice(-8), mode: undefined }) });
-    if (!res.ok) throw new Error('Server ' + res.status);
-    const data = await res.json();
-    removeTyping();
-    if (data.error) addMsg('agent', '⚠️ ' + data.error);
-    else { addMsg('agent', data.reply || ''); history.push({ role: 'assistant', content: data.reply || '' }); }
-  } catch (e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
-
-  busy = false;
-  document.getElementById('send-btn').disabled = false;
-  setStatus('Ready');
-}
-
-async function runAnalysis() {
-  if (busy||docs.length===0||pendingCnt>0) return;
-  const snap=[...docs];
-  const names=snap.map(d=>d.fileName).join(', ');
-  const userMsg=snap.length===1?`Analyze: ${names}`:`Analyze ${snap.length} documents: ${names}`;
-
+// ══════════════════════════════════════════════════════════════════════════════
+//  NEW SESSION
+// ══════════════════════════════════════════════════════════════════════════════
+function newSession() {
+  session = { started:false, resumeUploaded:false, resumeDoc:null, history:[] };
+  docs=[]; busy=false; pendingCnt=0; pendingCTCDocs=[]; pendingEPFODocs=[];
+  actionBarAction=null;
+  document.getElementById('messages').innerHTML='';
+  document.getElementById('chat-area').style.display='none';
+  document.getElementById('welcome').style.display='flex';
+  document.getElementById('resume-gate').style.display='none';
+  document.getElementById('input-bar').style.display='none';
+  document.getElementById('files-row').innerHTML='';
   document.getElementById('pending').classList.remove('show');
-  docs=[]; document.getElementById('files-row').innerHTML='';
-  await callAgent(snap, null, userMsg);
-}
-
-// ── Core API call ─────────────────────────────────────────────────────────────
-async function callAgent(docList, claimedCTC, userMsg) {
-  if (busy) return;
-  busy = true;
-  document.getElementById('send-btn').disabled = true;
-
-  if (userMsg) addMsg('user', userMsg);
-  history.push({ role: 'user', content: userMsg || 'analyze' });
-
-  addTyping(); setStatus('Analyzing…');
-
-  try {
-    const payload = docList.map(d => ({
-      id: d.id, fileName: d.fileName,
-      text: d.base64Image ? '' : d.text,
-      detectedType: d.detectedType,
-      ...(d.base64Image ? { base64Image: d.base64Image, imageMediaType: d.imageMediaType } : {})
-    }));
-
-    const res = await fetch('/.netlify/functions/agent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ documents: payload, history: history.slice(-6), claimedCTC, mode: undefined })
-    });
-
-    if (!res.ok) throw new Error('Server ' + res.status);
-    const data = await res.json();
-    removeTyping();
-
-    // ── NEW: handle needs_ctc signal ──────────────────────────────────────────
-    if (data.type === 'needs_ctc') {
-      pendingCTCDocs = docList;
-      const docNames = data.detected_docs.map(d => `${d.fileName} (${d.detectedType})`).join(', ');
-      addMsg('agent', `📂 Detected: **${docNames}**\n\nTo verify CTC inflation, I need the candidate's **claimed CTC**. Enter it in the bar below ↓`);
-      showCTCBar();
-      busy = false;
-      document.getElementById('send-btn').disabled = false;
-      setStatus('Waiting for CTC…');
-      return;
-    }
-
-    // ── NEW: handle needs_resume_for_epfo signal ───────────────────────────────
-    if (data.type === 'needs_resume_for_epfo') {
-      pendingEPFODocs = docList;
-      // Check if resume already in history
-      const existingResumes = getAllResumesCtx();
-      if (existingResumes.length > 0) {
-        // Resume already uploaded — combine and analyze
-        const resumeDocs = existingResumes.map((r, i) => ({
-          id: 'res_hist_' + i, fileName: r.fileName, text: r.text, detectedType: 'resume'
-        }));
-        busy = false;
-        document.getElementById('send-btn').disabled = false;
-        await callAgent([...docList, ...resumeDocs], claimedCTC, null);
-        return;
-      }
-      addMsg('agent', `📋 **EPFO Service History detected.**\n\nTo cross-verify employment, I need the **candidate's resume** too.\n\nPlease upload the resume using the 📎 button — I'll automatically run the verification.`);
-      busy = false;
-      document.getElementById('send-btn').disabled = false;
-      setStatus('Waiting for resume…');
-      return;
-    }
-
-    if (data.error) {
-      addMsg('agent', '⚠️ ' + data.error);
-    } else {
-      // Store all resumes for follow-up
-      const allResumes = docList.filter(d => d.detectedType === 'resume');
-      if (allResumes.length > 0) {
-        history[history.length - 1]._allResumes = allResumes.map(r => ({ text: r.text, fileName: r.fileName }));
-        history[history.length - 1]._resumeText = allResumes[0].text;
-        history[history.length - 1]._resumeFileName = allResumes[0].fileName;
-      }
-
-      addMsg('agent', bub => renderResult(data, bub));
-      history.push({ role: 'assistant', content: summarize(data) });
-
-      // Prompt for JD after multi-resume no-JD
-      if (data.type === 'multi_resume_nojd') {
-        addMsg('agent', `📋 **${data.candidates?.length || ''} resumes analysed.** Paste or type a **Job Description** below — I'll rank all candidates with skill scores instantly.`);
-      }
-    }
-  } catch (e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
-
-  busy = false;
-  document.getElementById('send-btn').disabled = false;
+  document.getElementById('send-btn') && (document.getElementById('send-btn').disabled=false);
+  document.getElementById('txt').value='';
+  hideCTCBar();
+  hideActionBar();
+  document.getElementById('session-bar').classList.remove('show');
+  // Reset step indicators
+  ['step-resume','step-docs','step-done'].forEach(id => {
+    const el=document.getElementById(id); if(el){el.className='sb-step pending';el.textContent=el.id==='step-resume'?'📄 Resume':el.id==='step-docs'?'📂 Documents':'✓ Results';}
+  });
   setStatus('Ready');
 }
-  
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  DRAG & DROP
+// ══════════════════════════════════════════════════════════════════════════════
+document.addEventListener('dragover', e=>{e.preventDefault();document.getElementById('drop-ov').classList.add('show');});
+document.getElementById('drop-ov').addEventListener('dragleave', e=>{
+  if(!e.relatedTarget||!document.getElementById('drop-ov').contains(e.relatedTarget))
+    document.getElementById('drop-ov').classList.remove('show');
+});
+document.addEventListener('drop', e=>{
+  e.preventDefault();
+  document.getElementById('drop-ov').classList.remove('show');
+  if (!session.started) startSession();
+  handleFiles(e.dataTransfer.files);
+});
+
+// Also allow dropping directly onto the resume gate
+document.addEventListener('DOMContentLoaded', () => {
+  const gate = document.getElementById('resume-gate');
+  if (gate) {
+    gate.addEventListener('dragover', e => e.preventDefault());
+    gate.addEventListener('drop', e => { e.preventDefault(); handleFiles(e.dataTransfer.files); });
+  }
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 //  RENDERERS
 // ══════════════════════════════════════════════════════════════════════════════
 function renderResult(data, bub) {
-  const t=data.type||'';
-  if      (t==='jd_resume')      bub.innerHTML=renderJD(data);
-  else if (t==='multi_rank')     bub.innerHTML=renderMulti(data);
-  else if (t==='offer_letter')   bub.innerHTML=renderOffer(data);
-  else if (t==='offer_salary')   bub.innerHTML=renderOffer(data.offer_check||data)+renderSalary(data.salary_check||{});
-  else if (t==='salary_slip')    bub.innerHTML=renderSalary(data);
-  else if (t==='salary_resume')  bub.innerHTML=renderSalary(data.salary_check||data)+renderEmployment(data.resume_check||{});
-  else if (t==='employment')     bub.innerHTML=renderEmployment(data);
-  else if (t==='jd_only')        bub.innerHTML=renderJDOnly(data);
-  else if (t==='combined')       bub.innerHTML=renderJD(data.jd_match||data)+'<div style="margin:10px 0 6px;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--font-head)">── Employment Check ──</div>'+renderEmployment(data.employment_check||{});
-  else if (data.scorecard||data.skill_match) bub.innerHTML=renderJD(data);
-  else if (t === 'multi_resume_nojd')  bub.innerHTML=renderMultiResumeNoJD(data);
-  else if (t === 'ctc_verification')   bub.innerHTML=renderCTCVerification(data);
-  else bub.innerHTML=md(data.reply||JSON.stringify(data,null,2));
+  const t = data.type || '';
+  if      (t==='jd_resume')           bub.innerHTML = renderJD(data);
+  else if (t==='multi_rank')          bub.innerHTML = renderMulti(data);
+  else if (t==='offer_letter')        bub.innerHTML = renderOffer(data);
+  else if (t==='offer_salary')        bub.innerHTML = renderOffer(data.offer_check||data)+renderSalary(data.salary_check||{});
+  else if (t==='salary_slip')         bub.innerHTML = renderSalary(data);
+  else if (t==='salary_resume')       bub.innerHTML = renderSalary(data.salary_check||data)+renderEmployment(data.resume_check||{});
+  else if (t==='employment')          bub.innerHTML = renderEmployment(data);
+  else if (t==='jd_only')             bub.innerHTML = renderJDOnly(data);
+  else if (t==='multi_resume_nojd')   bub.innerHTML = renderMultiResumeNoJD(data);
+  else if (t==='ctc_verification')    bub.innerHTML = renderCTCVerification(data);
+  else if (data.scorecard||data.skill_match) bub.innerHTML = renderJD(data);
+  else bub.innerHTML = md(data.reply || JSON.stringify(data,null,2));
 }
 
-// ── Score ring helper ─────────────────────────────────────────────────────────
-function scoreRing(pct, color) {
+function scoreRing(pct,color) {
   const c=Math.round(2*Math.PI*28);
   return `<div class="score-ring-wrap"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg4)" stroke-width="4.5"/><circle cx="32" cy="32" r="28" fill="none" stroke="${color}" stroke-width="4.5" stroke-dasharray="${c}" stroke-dashoffset="${Math.round(c*(1-pct/100))}" stroke-linecap="round"/></svg><div class="score-num" style="color:${color}">${pct}%</div></div>`;
 }
-function recColor(r) { return r==='SHORTLIST'?'var(--green)':r==='MAYBE'?'var(--amber)':'var(--red)'; }
-function recBadge(r) { const cls=r==='SHORTLIST'?'vb-green':r==='MAYBE'?'vb-amber':'vb-red'; return `<span class="vbadge ${cls}">${r}</span>`; }
-function scoreColor(s) { return s>=70?'var(--green)':s>=45?'var(--amber)':'var(--red)'; }
-function verdictBadge(v,map) {
+function recColor(r){return r==='SHORTLIST'?'var(--green)':r==='MAYBE'?'var(--amber)':'var(--red)';}
+function recBadge(r){const cls=r==='SHORTLIST'?'vb-green':r==='MAYBE'?'vb-amber':'vb-red';return `<span class="vbadge ${cls}">${r}</span>`;}
+function scoreColor(s){return s>=70?'var(--green)':s>=45?'var(--amber)':'var(--red)';}
+function verdictBadge(v){
   const u=(v||'').toUpperCase();
   const green=['AUTHENTIC','GENUINE','VALID','MATCH','CLEAN','SHORTLIST','LOW_RISK','COMPLETE'];
   const amber=['SUSPICIOUS','MAYBE','PARTIAL','GAPS_FOUND','INFLATED','MEDIUM_RISK'];
   const cls=green.includes(u)?'vb-green':amber.includes(u)?'vb-amber':'vb-red';
   return `<span class="vbadge ${cls}">${v}</span>`;
 }
-function checkIcon(s) {
-  const isPass=s==='PASS'||s==='pass', isWarn=s==='WARN'||s==='neutral';
+function checkIcon(s){
+  const isPass=s==='PASS'||s==='pass',isWarn=s==='WARN'||s==='neutral';
   const col=isPass?'var(--green)':isWarn?'var(--amber)':'var(--red)';
   if(isPass) return `<svg class="ci-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="${col}" stroke-width="1.2"/><path d="M5 8l2 2 4-4" stroke="${col}" stroke-width="1.3" stroke-linecap="round"/></svg>`;
   if(isWarn) return `<svg class="ci-icon" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="${col}" stroke-width="1.2"/><path d="M8 5v4" stroke="${col}" stroke-width="1.3" stroke-linecap="round"/><circle cx="8" cy="11" r=".7" fill="${col}"/></svg>`;
@@ -801,580 +1091,187 @@ function checkIcon(s) {
 }
 
 // ── JD vs Resume ──────────────────────────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════
-//  PASTE THIS BLOCK INTO index.html
-//  Replace everything from "// ── JD vs Resume ──" to "// ── Offer letter ──"
-// ═══════════════════════════════════════════════════════════════════════════
-
-// ── JD vs Resume ─────────────────────────────────────────────────────────────
 function renderJD(data) {
-  if (!data) return '';
-  const sc = data.scorecard || {}, rec = sc.recommendation || 'UNKNOWN', pct = sc.match_percentage || 0;
-  const col = scoreColor(pct);
-
-  let h = `<div class="result-section">
-  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">
-    JD vs Resume — <strong style="color:var(--text)">${data.candidate?.name || 'Candidate'}</strong>
-    · ${data.candidate?.total_experience_years || 0}y exp
-    ${data.candidate?.current_role ? `· <span style="color:var(--muted2)">${data.candidate.current_role}</span>` : ''}
-    ${data.candidate?.current_company ? `@ <span style="color:var(--muted2)">${data.candidate.current_company}</span>` : ''}
-  </div>
-
-  <div class="verdict-hero">
-    ${scoreRing(pct, col)}
-    <div class="verdict-info">
-      <div class="verdict-row">
-        <span class="verdict-title">Match Score</span>
-        ${recBadge(rec)}
-      </div>
-      <div class="verdict-reason">${sc.recommendation_reason || ''}</div>
-      <div class="verdict-meta">${sc.mandatory_skills_met || 0}/${sc.mandatory_skills_total || 0} mandatory skills met</div>
-    </div>
-  </div>`;
-
-  // ── Full Skill Table with years ──────────────────────────────────────────
-  const skills = data.skill_match || [];
-  if (skills.length) {
-    h += `<div class="rcard">
-    <div class="rcard-head">
-      <span class="rcard-title">Skill Match — Years Breakdown</span>
-      <span style="font-size:.65rem;color:var(--muted)">Required vs Candidate has</span>
-    </div>
-    <table class="skill-table">
-      <thead><tr>
-        <th style="text-align:left">Skill</th>
-        <th>Required</th>
-        <th>Candidate Has</th>
-        <th style="min-width:80px">Experience Bar</th>
-        <th>Status</th>
-        <th style="text-align:left;font-size:.6rem">Used At</th>
-      </tr></thead><tbody>`;
-    skills.forEach(s => {
-      const req = s.required_years || 0, actual = s.actual_years || 0;
-      const fillPct = req > 0 ? Math.min(100, (actual / req) * 100) : actual > 0 ? 100 : 0;
-      const c = s.matched ? 'var(--green)' : actual > 0 ? 'var(--amber)' : 'var(--red)';
-      const badge = s.matched ? 'smb-match' : actual > 0 ? 'smb-partial' : 'smb-miss';
-      const label = s.matched ? '✓ Match' : actual > 0 ? '~ Partial' : '✗ Missing';
-      const usedAt = s.used_at || '';
-      h += `<tr>
-        <td class="skill-name-cell">${s.skill}</td>
-        <td class="skill-years">${req ? req + 'y' : '—'}</td>
-        <td class="skill-years" style="color:${c};font-weight:600">${actual ? actual + 'y' : '—'}</td>
-        <td class="skill-bar-cell">
-          <div class="skill-bar-track">
-            <div class="skill-bar-fill" style="width:${fillPct}%;background:${c}"></div>
-          </div>
-        </td>
-        <td><span class="skill-match-badge ${badge}">${label}</span></td>
-        <td style="font-size:.65rem;color:var(--muted2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${usedAt}</td>
-      </tr>`;
-    });
-    h += `</tbody></table></div>`;
-  }
-
-  // ── Strengths & Gaps ──────────────────────────────────────────────────────
-  const strengths = sc.strengths || [], gaps = sc.gaps || [];
-  if (strengths.length || gaps.length) {
-    h += `<div class="sg-grid">`;
-    if (strengths.length) {
-      h += `<div class="sg-card"><div class="sg-head sg-g-head">✓ Strengths</div><div class="sg-body">`;
-      strengths.forEach(s => { h += `<div class="sg-item"><span style="color:var(--green);flex-shrink:0">▸</span>${s}</div>`; });
-      h += `</div></div>`;
-    }
-    if (gaps.length) {
-      h += `<div class="sg-card"><div class="sg-head sg-r-head">✗ Gaps</div><div class="sg-body">`;
-      gaps.forEach(g => { h += `<div class="sg-item"><span style="color:var(--red);flex-shrink:0">▸</span>${g}</div>`; });
-      h += `</div></div>`;
-    }
-    h += `</div>`;
-  }
-
-  return h + '</div>';
-}
-
-// ── Multi-candidate ranking ───────────────────────────────────────────────────
-function renderMulti(data) {
-  if (!data || !data.candidates) return '';
-  const sorted = [...data.candidates].sort((a, b) => (b.match_percentage || 0) - (a.match_percentage || 0));
-
-  let h = `<div class="result-section">
-  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">
-    Candidate Ranking — <strong style="color:var(--text)">${sorted.length} candidates</strong> for 
-    <strong style="color:var(--amber)">${data.role || 'this role'}</strong>
-  </div>
-
-  <!-- ── Summary Ranking Table ── -->
-  <div class="rcard">
-    <div class="rcard-head"><span class="rcard-title">📊 Candidate Ranking</span></div>
-    <table class="rank-table">
-      <thead><tr>
-        <th>#</th><th>Candidate</th><th>Exp</th><th>Role</th>
-        <th>Match %</th><th>Skills Met</th><th>Verdict</th><th>Reason</th>
-      </tr></thead><tbody>`;
-
-  sorted.forEach((c, i) => {
-    const pct = c.match_percentage || 0, col = scoreColor(pct);
-    const rnCls = i === 0 ? 'rn-1' : i === 1 ? 'rn-2' : i === 2 ? 'rn-3' : 'rn-other';
-    const rec = c.recommendation || 'UNKNOWN';
-    h += `<tr>
-      <td><span class="rank-num ${rnCls}">${i + 1}</span></td>
-      <td style="font-weight:600;color:var(--text)">${c.name || 'Unknown'}</td>
-      <td class="skill-years">${c.total_experience_years || c.experience_years || 0}y</td>
-      <td style="font-size:.7rem;color:var(--muted2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.current_role || '—'}</td>
-      <td><span style="font-family:var(--font-mono);color:${col};font-weight:700;font-size:.85rem">${pct}%</span></td>
-      <td class="skill-years">${c.mandatory_met || 0}/${c.mandatory_total || 0}</td>
-      <td>${recBadge(rec)}</td>
-      <td style="font-size:.68rem;color:var(--muted2);max-width:160px">${c.recommendation_reason || ''}</td>
-    </tr>`;
-  });
-  h += `</tbody></table></div>`;
-
-  // ── All-Candidates Skill Heatmap ─────────────────────────────────────────
-  // Collect all unique skills across all candidates
-  const allSkills = [...new Set(sorted.flatMap(c => (c.skill_match || []).map(s => s.skill)))];
-
-  if (allSkills.length > 0) {
-    h += `<div class="rcard" style="margin-top:10px">
-      <div class="rcard-head">
-        <span class="rcard-title">🔥 Skill × Candidate Heatmap — Years of Experience</span>
-        <span style="font-size:.6rem;color:var(--muted)">Green=Match · Amber=Partial · Red=Missing</span>
-      </div>
-      <div style="overflow-x:auto">
-      <table class="skill-table" style="min-width:${100 + sorted.length * 90}px">
-        <thead><tr>
-          <th style="text-align:left;min-width:110px">Skill / Req</th>`;
-    sorted.forEach((c, i) => {
-      const rnCls = i === 0 ? 'rn-1' : i === 1 ? 'rn-2' : i === 2 ? 'rn-3' : 'rn-other';
-      h += `<th style="text-align:center;min-width:80px">
-        <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
-          <span class="rank-num ${rnCls}" style="width:22px;height:22px;font-size:.7rem">${i + 1}</span>
-          <span style="font-size:.65rem;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${c.name?.split(' ')[0] || 'C'+(i+1)}</span>
-        </div>
-      </th>`;
-    });
-    h += `</tr></thead><tbody>`;
-
-    allSkills.forEach(skill => {
-      // Find required_years from any candidate's skill_match for this skill
-      let reqYears = null;
-      for (const c of sorted) {
-        const sm = (c.skill_match || []).find(s => s.skill === skill);
-        if (sm && sm.required_years != null) { reqYears = sm.required_years; break; }
-      }
-
-      h += `<tr>
-        <td class="skill-name-cell">
-          ${skill}
-          <div style="font-size:.65rem;color:var(--muted);font-family:var(--font-mono)">${reqYears ? 'req: ' + reqYears + 'y' : 'any'}</div>
-        </td>`;
-
-      sorted.forEach(c => {
-        const sm = (c.skill_match || []).find(s => s.skill === skill);
-        const actual = sm?.actual_years || 0;
-        const matched = sm?.matched || false;
-        const hasPartial = !matched && actual > 0;
-        const bg = matched ? 'rgba(13,115,119,0.1)' : hasPartial ? 'rgba(212,138,0,0.1)' : actual === 0 && sm ? 'rgba(214,48,49,0.07)' : 'transparent';
-        const textCol = matched ? 'var(--green)' : hasPartial ? 'var(--amber)' : 'var(--red)';
-        const display = sm ? (actual ? actual + 'y' : '—') : '?';
-        h += `<td style="text-align:center;background:${bg}">
-          <span style="font-family:var(--font-mono);font-size:.75rem;font-weight:600;color:${display === '?' ? 'var(--muted)' : textCol}">${display}</span>
-        </td>`;
-      });
-      h += `</tr>`;
-    });
-    h += `</tbody></table></div></div>`;
-  }
-
-  // ── Per-Candidate Skill Detail Cards ─────────────────────────────────────
-  h += `<div style="margin-top:10px;font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--font-head);margin-bottom:6px">── Per-Candidate Skill Breakdown ──</div>`;
-
-  sorted.forEach((c, i) => {
-    const pct = c.match_percentage || 0;
-    const col = scoreColor(pct);
-    const rnCls = i === 0 ? 'rn-1' : i === 1 ? 'rn-2' : i === 2 ? 'rn-3' : 'rn-other';
-    const rec = c.recommendation || 'UNKNOWN';
-    const skills = c.skill_match || [];
-
-    h += `<div class="rcard" style="margin-bottom:8px">
-      <div class="rcard-head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-        <span class="rank-num ${rnCls}" style="width:24px;height:24px;font-size:.75rem">${i + 1}</span>
-        <span style="font-weight:600;color:var(--text);font-size:.82rem">${c.name || 'Candidate'}</span>
-        <span class="skill-years">${c.total_experience_years || c.experience_years || 0}y exp</span>
-        ${c.current_role ? `<span style="font-size:.7rem;color:var(--muted2)">${c.current_role}</span>` : ''}
-        <span style="font-family:var(--font-mono);color:${col};font-weight:700">${pct}%</span>
-        ${recBadge(rec)}
-        <span style="font-size:.68rem;color:var(--muted2);flex:1">${c.recommendation_reason || ''}</span>
-      </div>`;
-
-    if (skills.length) {
-      h += `<table class="skill-table">
-        <thead><tr>
-          <th style="text-align:left">Skill</th>
-          <th>Required</th>
-          <th>Has</th>
-          <th style="min-width:70px">Bar</th>
-          <th>Status</th>
-          <th style="text-align:left;font-size:.6rem">Used At</th>
-        </tr></thead><tbody>`;
-      skills.forEach(s => {
-        const req = s.required_years || 0, actual = s.actual_years || 0;
-        const fillPct = req > 0 ? Math.min(100, (actual / req) * 100) : actual > 0 ? 100 : 0;
-        const sc2 = s.matched ? 'var(--green)' : actual > 0 ? 'var(--amber)' : 'var(--red)';
-        const badge = s.matched ? 'smb-match' : actual > 0 ? 'smb-partial' : 'smb-miss';
-        const lbl = s.matched ? '✓' : actual > 0 ? '~' : '✗';
-        const usedAt = s.used_at || '';
-        h += `<tr>
-          <td class="skill-name-cell">${s.skill}</td>
-          <td class="skill-years">${req ? req + 'y' : '—'}</td>
-          <td class="skill-years" style="color:${sc2};font-weight:600">${actual ? actual + 'y' : '—'}</td>
-          <td class="skill-bar-cell">
-            <div class="skill-bar-track">
-              <div class="skill-bar-fill" style="width:${fillPct}%;background:${sc2}"></div>
-            </div>
-          </td>
-          <td><span class="skill-match-badge ${badge}">${lbl}</span></td>
-          <td style="font-size:.65rem;color:var(--muted2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${usedAt}</td>
-        </tr>`;
-      });
-      h += `</tbody></table>`;
-    } else {
-      h += `<div class="rcard-body" style="color:var(--muted);font-size:.75rem">No skill data extracted</div>`;
-    }
-    h += `</div>`;
-  });
-
-  return h + '</div>';
-}
-
-// ── Offer letter ──────────────────────────────────────────────────────────────
-function renderOffer(data) {
   if(!data) return '';
-  const score=data.overall_score||0, verdict=data.verdict||'UNKNOWN';
-  const col=scoreColor(score);
+  const sc=data.scorecard||{},rec=sc.recommendation||'UNKNOWN',pct=sc.match_percentage||0;
+  const col=scoreColor(pct);
   let h=`<div class="result-section">
+  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">
+    JD vs Resume — <strong style="color:var(--text)">${data.candidate?.name||'Candidate'}</strong>
+    · ${data.candidate?.total_experience_years||0}y exp
+    ${data.candidate?.current_role?`· <span style="color:var(--muted2)">${data.candidate.current_role}</span>`:''}
+    ${data.candidate?.current_company?`@ <span style="color:var(--muted2)">${data.candidate.current_company}</span>`:''}
+  </div>
   <div class="verdict-hero">
-    ${scoreRing(score,col)}
+    ${scoreRing(pct,col)}
     <div class="verdict-info">
-      <div class="verdict-row"><span class="verdict-title">Offer Letter</span>${verdictBadge(verdict)}</div>
-      <div class="verdict-reason">${data.verdict_reason||''}</div>
+      <div class="verdict-row"><span class="verdict-title">Match Score</span>${recBadge(rec)}</div>
+      <div class="verdict-reason">${sc.recommendation_reason||''}</div>
+      <div class="verdict-meta">${sc.mandatory_skills_met||0}/${sc.mandatory_skills_total||0} mandatory skills met</div>
     </div>
   </div>`;
-
-  const checks=data.checks||{};
-  if(Object.keys(checks).length) {
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Checks</span></div><div class="rcard-body"><div class="bar-rows">`;
-    for(const [k,v] of Object.entries(checks)) {
-      const s=v.score||0;
-      const c=s>=70?'var(--green)':s>=45?'var(--amber)':'var(--red)';
-      h+=`<div class="bar-row"><span class="bar-label">${k.replace(/_/g,' ')}</span><div class="bar-track"><div class="bar-fill" style="width:${s}%;background:${c}"></div></div><span class="bar-val">${s}</span></div>`;
-    }
-    h+=`</div></div></div>`;
+  const skills=data.skill_match||[];
+  if(skills.length){
+    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Skill Match — Years Breakdown</span><span style="font-size:.65rem;color:var(--muted)">Required vs Candidate has</span></div>
+    <table class="skill-table"><thead><tr><th style="text-align:left">Skill</th><th>Required</th><th>Candidate Has</th><th style="min-width:80px">Bar</th><th>Status</th><th style="text-align:left;font-size:.6rem">Used At</th></tr></thead><tbody>`;
+    skills.forEach(s=>{
+      const req=s.required_years||0,actual=s.actual_years||0;
+      const fp=req>0?Math.min(100,(actual/req)*100):actual>0?100:0;
+      const c=s.matched?'var(--green)':actual>0?'var(--amber)':'var(--red)';
+      const badge=s.matched?'smb-match':actual>0?'smb-partial':'smb-miss';
+      const label=s.matched?'✓ Match':actual>0?'~ Partial':'✗ Missing';
+      h+=`<tr><td class="skill-name-cell">${s.skill}</td><td class="skill-years">${req?req+'y':'—'}</td><td class="skill-years" style="color:${c};font-weight:600">${actual?actual+'y':'—'}</td><td class="skill-bar-cell"><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${fp}%;background:${c}"></div></div></td><td><span class="skill-match-badge ${badge}">${label}</span></td><td style="font-size:.65rem;color:var(--muted2);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${s.used_at||''}</td></tr>`;
+    });
+    h+=`</tbody></table></div>`;
   }
-
-  if(data.red_flags_list?.length||data.positive_signals?.length) {
+  const strengths=sc.strengths||[],gaps=sc.gaps||[];
+  if(strengths.length||gaps.length){
     h+=`<div class="sg-grid">`;
-    if(data.positive_signals?.length) {
-      h+=`<div class="sg-card"><div class="sg-head sg-g-head">✓ Positive</div><div class="sg-body">`;
-      data.positive_signals.forEach(s=>{ h+=`<div class="sg-item"><span style="color:var(--green);flex-shrink:0">▸</span>${s}</div>`; });
-      h+=`</div></div>`;
-    }
-    if(data.red_flags_list?.length) {
-      h+=`<div class="sg-card"><div class="sg-head sg-r-head">⚠ Red Flags</div><div class="sg-body">`;
-      data.red_flags_list.forEach(f=>{ h+=`<div class="sg-item"><span style="color:var(--red);flex-shrink:0">▸</span>${f}</div>`; });
-      h+=`</div></div>`;
-    }
+    if(strengths.length){h+=`<div class="sg-card"><div class="sg-head sg-g-head">✓ Strengths</div><div class="sg-body">`;strengths.forEach(s=>{h+=`<div class="sg-item"><span style="color:var(--green);flex-shrink:0">▸</span>${s}</div>`;}); h+=`</div></div>`;}
+    if(gaps.length){h+=`<div class="sg-card"><div class="sg-head sg-r-head">✗ Gaps</div><div class="sg-body">`;gaps.forEach(g=>{h+=`<div class="sg-item"><span style="color:var(--red);flex-shrink:0">▸</span>${g}</div>`;}); h+=`</div></div>`;}
     h+=`</div>`;
   }
   return h+'</div>';
 }
 
-// ── Salary / CTC ──────────────────────────────────────────────────────────────
-function renderSalary(data) {
-  if(!data) return '';
-  const score=data.overall_score||0, verdict=data.verdict||'UNKNOWN';
-  const col=scoreColor(score);
-  const ctc=data.ctc_inflation||{};
+// ── Multi-candidate ranking ───────────────────────────────────────────────────
+function renderMulti(data) {
+  if(!data||!data.candidates) return '';
+  const sorted=[...data.candidates].sort((a,b)=>(b.match_percentage||0)-(a.match_percentage||0));
   let h=`<div class="result-section">
-  <div class="verdict-hero">
-    ${scoreRing(score,col)}
-    <div class="verdict-info">
-      <div class="verdict-row"><span class="verdict-title">Salary Slip</span>${verdictBadge(verdict)}</div>
-      <div class="verdict-reason">${data.verdict_reason||data.ai_reasoning||''}</div>
-    </div>
-  </div>`;
-
-  if(ctc.derived_annual_ctc) {
-    const fmt=v=>v?'₹'+(v/100000).toFixed(2)+'L':'—';
-    const iv=ctc.inflation_percent;
-    const ic=Math.abs(iv||0)<=15?'var(--green)':iv>15?'var(--red)':'var(--amber)';
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">CTC Verification</span>${verdictBadge(ctc.verdict)}</div><div class="rcard-body">
-    <div class="ctc-grid">
-      <div class="ctc-item"><div class="ctc-label">Derived CTC</div><div class="ctc-val">${fmt(ctc.derived_annual_ctc)}</div></div>
-      <div class="ctc-item"><div class="ctc-label">Claimed CTC</div><div class="ctc-val">${fmt(ctc.claimed_ctc_annual)}</div></div>
-      <div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${ic}">${iv!=null?(iv>0?'+':'')+iv+'%':'—'}</div></div>
-      <div class="ctc-item"><div class="ctc-label">Verdict</div><div class="ctc-val" style="font-size:.75rem">${ctc.verdict||'—'}</div></div>
-    </div></div></div>`;
+  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">Candidate Ranking — <strong style="color:var(--text)">${sorted.length} candidates</strong> for <strong style="color:var(--amber)">${data.role||'this role'}</strong></div>
+  <div class="rcard"><div class="rcard-head"><span class="rcard-title">📊 Candidate Ranking</span></div>
+  <table class="rank-table"><thead><tr><th>#</th><th>Candidate</th><th>Exp</th><th>Role</th><th>Match %</th><th>Skills Met</th><th>Verdict</th><th>Reason</th></tr></thead><tbody>`;
+  sorted.forEach((c,i)=>{
+    const pct=c.match_percentage||0,col=scoreColor(pct);
+    const rnCls=i===0?'rn-1':i===1?'rn-2':i===2?'rn-3':'rn-other';
+    const rec=c.recommendation||'UNKNOWN';
+    h+=`<tr><td><span class="rank-num ${rnCls}">${i+1}</span></td><td style="font-weight:600;color:var(--text)">${c.name||'Unknown'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td style="font-size:.7rem;color:var(--muted2);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.current_role||'—'}</td><td><span style="font-family:var(--font-mono);color:${col};font-weight:700;font-size:.85rem">${pct}%</span></td><td class="skill-years">${c.mandatory_met||0}/${c.mandatory_total||0}</td><td>${recBadge(rec)}</td><td style="font-size:.68rem;color:var(--muted2);max-width:160px">${c.recommendation_reason||''}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  const allSkills=[...new Set(sorted.flatMap(c=>(c.skill_match||[]).map(s=>s.skill)))];
+  if(allSkills.length>0){
+    h+=`<div class="rcard" style="margin-top:10px"><div class="rcard-head"><span class="rcard-title">🔥 Skill × Candidate Heatmap</span><span style="font-size:.6rem;color:var(--muted)">Green=Match · Amber=Partial · Red=Missing</span></div><div style="overflow-x:auto"><table class="skill-table" style="min-width:${100+sorted.length*90}px"><thead><tr><th style="text-align:left;min-width:110px">Skill</th>`;
+    sorted.forEach((c,i)=>{const rnCls=i===0?'rn-1':i===1?'rn-2':i===2?'rn-3':'rn-other';h+=`<th style="text-align:center;min-width:80px"><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><span class="rank-num ${rnCls}" style="width:22px;height:22px;font-size:.7rem">${i+1}</span><span style="font-size:.65rem;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${c.name?.split(' ')[0]||'C'+(i+1)}</span></div></th>`;});
+    h+=`</tr></thead><tbody>`;
+    allSkills.forEach(skill=>{
+      let reqYears=null;
+      for(const c of sorted){const sm=(c.skill_match||[]).find(s=>s.skill===skill);if(sm&&sm.required_years!=null){reqYears=sm.required_years;break;}}
+      h+=`<tr><td class="skill-name-cell">${skill}<div style="font-size:.65rem;color:var(--muted);font-family:var(--font-mono)">${reqYears?'req: '+reqYears+'y':'any'}</div></td>`;
+      sorted.forEach(c=>{
+        const sm=(c.skill_match||[]).find(s=>s.skill===skill);
+        const actual=sm?.actual_years||0,matched=sm?.matched||false,hasPartial=!matched&&actual>0;
+        const bg=matched?'rgba(13,115,119,0.1)':hasPartial?'rgba(212,138,0,0.1)':actual===0&&sm?'rgba(214,48,49,0.07)':'transparent';
+        const textCol=matched?'var(--green)':hasPartial?'var(--amber)':'var(--red)';
+        const display=sm?(actual?actual+'y':'—'):'?';
+        h+=`<td style="text-align:center;background:${bg}"><span style="font-family:var(--font-mono);font-size:.75rem;font-weight:600;color:${display==='?'?'var(--muted)':textCol}">${display}</span></td>`;
+      });
+      h+=`</tr>`;
+    });
+    h+=`</tbody></table></div></div>`;
   }
+  return h+'</div>';
+}
 
-  if(data.rule_checks?.length) {
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Rule Checks</span></div><div class="rcard-body"><div class="check-list">`;
-    data.rule_checks.forEach(c=>{ h+=`<div class="check-item">${checkIcon(c.status)}<span>${c.finding}</span></div>`; });
-    h+=`</div></div></div>`;
-  }
+// ── Offer letter ──────────────────────────────────────────────────────────────
+function renderOffer(data){
+  if(!data) return '';
+  const score=data.overall_score||0,verdict=data.verdict||'UNKNOWN',col=scoreColor(score);
+  let h=`<div class="result-section"><div class="verdict-hero">${scoreRing(score,col)}<div class="verdict-info"><div class="verdict-row"><span class="verdict-title">Offer Letter</span>${verdictBadge(verdict)}</div><div class="verdict-reason">${data.verdict_reason||''}</div></div></div>`;
+  const checks=data.checks||{};
+  if(Object.keys(checks).length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Checks</span></div><div class="rcard-body"><div class="bar-rows">`;for(const[k,v]of Object.entries(checks)){const s=v.score||0,c=s>=70?'var(--green)':s>=45?'var(--amber)':'var(--red)';h+=`<div class="bar-row"><span class="bar-label">${k.replace(/_/g,' ')}</span><div class="bar-track"><div class="bar-fill" style="width:${s}%;background:${c}"></div></div><span class="bar-val">${s}</span></div>`;}h+=`</div></div></div>`;}
+  if(data.red_flags_list?.length||data.positive_signals?.length){h+=`<div class="sg-grid">`;if(data.positive_signals?.length){h+=`<div class="sg-card"><div class="sg-head sg-g-head">✓ Positive</div><div class="sg-body">`;data.positive_signals.forEach(s=>{h+=`<div class="sg-item"><span style="color:var(--green);flex-shrink:0">▸</span>${s}</div>`;});h+=`</div></div>`;}if(data.red_flags_list?.length){h+=`<div class="sg-card"><div class="sg-head sg-r-head">⚠ Red Flags</div><div class="sg-body">`;data.red_flags_list.forEach(f=>{h+=`<div class="sg-item"><span style="color:var(--red);flex-shrink:0">▸</span>${f}</div>`;});h+=`</div></div>`;}h+=`</div>`;}
+  return h+'</div>';
+}
 
-  if(data.red_flags?.length) {
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;
-    data.red_flags.forEach(f=>{ h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`; });
-    h+=`</div></div></div>`;
-  }
+// ── Salary / CTC ──────────────────────────────────────────────────────────────
+function renderSalary(data){
+  if(!data) return '';
+  const score=data.overall_score||0,verdict=data.verdict||'UNKNOWN',col=scoreColor(score);
+  const ctc=data.ctc_inflation||{};
+  let h=`<div class="result-section"><div class="verdict-hero">${scoreRing(score,col)}<div class="verdict-info"><div class="verdict-row"><span class="verdict-title">Salary Slip</span>${verdictBadge(verdict)}</div><div class="verdict-reason">${data.verdict_reason||data.ai_reasoning||''}</div></div></div>`;
+  if(ctc.derived_annual_ctc){const fmt=v=>v?'₹'+(v/100000).toFixed(2)+'L':'—';const iv=ctc.inflation_percent;const ic=Math.abs(iv||0)<=15?'var(--green)':iv>15?'var(--red)':'var(--amber)';h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">CTC Verification</span>${verdictBadge(ctc.verdict)}</div><div class="rcard-body"><div class="ctc-grid"><div class="ctc-item"><div class="ctc-label">Derived CTC</div><div class="ctc-val">${fmt(ctc.derived_annual_ctc)}</div></div><div class="ctc-item"><div class="ctc-label">Claimed CTC</div><div class="ctc-val">${fmt(ctc.claimed_ctc_annual)}</div></div><div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${ic}">${iv!=null?(iv>0?'+':'')+iv+'%':'—'}</div></div><div class="ctc-item"><div class="ctc-label">Verdict</div><div class="ctc-val" style="font-size:.75rem">${ctc.verdict||'—'}</div></div></div></div></div>`;}
+  if(data.rule_checks?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Rule Checks</span></div><div class="rcard-body"><div class="check-list">`;data.rule_checks.forEach(c=>{h+=`<div class="check-item">${checkIcon(c.status)}<span>${c.finding}</span></div>`;});h+=`</div></div></div>`;}
+  if(data.red_flags?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;data.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div></div>`;}
   return h+'</div>';
 }
 
 // ── Employment / Service history ──────────────────────────────────────────────
-function renderEmployment(data) {
+function renderEmployment(data){
   if(!data) return '';
   const verdict=data.verdict||'UNKNOWN';
-  let h=`<div class="result-section">
-  <div class="rcard"><div class="rcard-head"><span class="rcard-title">Employment Verification</span>${verdictBadge(verdict)}</div>
-  <div class="rcard-body"><div style="font-size:.78rem;color:var(--muted2);line-height:1.6">${data.verdict_reason||''}</div>`;
-
-  if(data.experience_summary) {
-    const es=data.experience_summary;
-    h+=`<div class="ctc-grid" style="margin-top:8px">
-      <div class="ctc-item"><div class="ctc-label">Resume Claims</div><div class="ctc-val">${es.resume_total_years||0}y</div></div>
-      <div class="ctc-item"><div class="ctc-label">Verified</div><div class="ctc-val">${es.epfo_total_years||es.verified_total_years||0}y</div></div>
-      <div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${(es.inflation_years||0)>0?'var(--red)':'var(--green)'}">${es.inflation_years||0}y</div></div>
-    </div>`;
-  }
+  let h=`<div class="result-section"><div class="rcard"><div class="rcard-head"><span class="rcard-title">Employment Verification</span>${verdictBadge(verdict)}</div><div class="rcard-body"><div style="font-size:.78rem;color:var(--muted2);line-height:1.6">${data.verdict_reason||''}</div>`;
+  if(data.experience_summary){const es=data.experience_summary;h+=`<div class="ctc-grid" style="margin-top:8px"><div class="ctc-item"><div class="ctc-label">Resume Claims</div><div class="ctc-val">${es.resume_total_years||0}y</div></div><div class="ctc-item"><div class="ctc-label">Verified</div><div class="ctc-val">${es.epfo_total_years||es.verified_total_years||0}y</div></div><div class="ctc-item"><div class="ctc-label">Inflation</div><div class="ctc-val" style="color:${(es.inflation_years||0)>0?'var(--red)':'var(--green)'}">${es.inflation_years||0}y</div></div></div>`;}
   h+=`</div></div>`;
-
-  if(data.gaps?.length) {
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Employment Gaps</span></div><div class="rcard-body"><div class="check-list">`;
-    data.gaps.forEach(g=>{
-      const st=g.severity==='SHORT'?'PASS':g.severity==='MEDIUM'?'WARN':'FAIL';
-      h+=`<div class="check-item">${checkIcon(st)}<span>${g.label||(g.from_company+' → '+g.to_company+' ('+g.gap_months+'mo)')}</span></div>`;
-    });
-    h+=`</div></div></div>`;
-  }
-
-  if(data.red_flags?.length) {
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;
-    data.red_flags.forEach(f=>{ h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`; });
-    h+=`</div></div></div>`;
-  }
+  if(data.gaps?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Employment Gaps</span></div><div class="rcard-body"><div class="check-list">`;data.gaps.forEach(g=>{const st=g.severity==='SHORT'?'PASS':g.severity==='MEDIUM'?'WARN':'FAIL';h+=`<div class="check-item">${checkIcon(st)}<span>${g.label||(g.from_company+' → '+g.to_company+' ('+g.gap_months+'mo)')}</span></div>`;});h+=`</div></div></div>`;}
+  if(data.red_flags?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;data.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div></div>`;}
   return h+'</div>';
 }
 
-// ── JD only (no resume) ───────────────────────────────────────────────────────
-function renderJDOnly(data) {
+// ── JD only ───────────────────────────────────────────────────────────────────
+function renderJDOnly(data){
   const s=data.jd_summary||{};
-  let h=`<div class="result-section">
-  <div class="rcard"><div class="rcard-head"><span class="rcard-title">JD Parsed — Resume Needed for Scoring</span></div>
-  <div class="rcard-body">
-    <div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:4px">${s.role||'Role not detected'}</div>
-    <div style="font-size:.75rem;color:var(--muted2)">${s.company?'🏢 '+s.company:''} ${s.ctc_range?'· 💰 '+s.ctc_range:''}</div>
-  </div></div>`;
+  let h=`<div class="result-section"><div class="rcard"><div class="rcard-head"><span class="rcard-title">JD Parsed</span></div><div class="rcard-body"><div style="font-size:.88rem;font-weight:600;color:var(--text);margin-bottom:4px">${s.role||'Role not detected'}</div><div style="font-size:.75rem;color:var(--muted2)">${s.company?'🏢 '+s.company:''} ${s.ctc_range?'· 💰 '+s.ctc_range:''}</div></div></div>`;
+  if(data.required_skills?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Required Skills</span></div><table class="skill-table"><thead><tr><th>Skill</th><th>Type</th><th>Years</th></tr></thead><tbody>`;data.required_skills.forEach(s=>{h+=`<tr><td class="skill-name-cell">${s.skill}</td><td><span class="skill-match-badge ${s.mandatory?'smb-match':'smb-partial'}">${s.mandatory?'Mandatory':'Optional'}</span></td><td class="skill-years">${s.years?s.years+'y':'—'}</td></tr>`;});h+=`</tbody></table></div>`;}
+  h+=`<div class="next-step-card">💡 Upload the candidate's <strong>resume</strong> to run the full skill match scorecard</div>`;
+  return h+'</div>';
+}
 
-  if(data.required_skills?.length) {
-    h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Required Skills</span></div>
-    <table class="skill-table"><thead><tr><th>Skill</th><th>Type</th><th>Years</th></tr></thead><tbody>`;
-    data.required_skills.forEach(s=>{
-      h+=`<tr><td class="skill-name-cell">${s.skill}</td>
-      <td><span class="skill-match-badge ${s.mandatory?'smb-match':'smb-partial'}">${s.mandatory?'Mandatory':'Optional'}</span></td>
-      <td class="skill-years">${s.years?s.years+'y':'—'}</td></tr>`;
-    });
-    h+=`</tbody></table></div>`;
+// ── Multi-resume no JD ────────────────────────────────────────────────────────
+function renderMultiResumeNoJD(data){
+  const candidates=data.candidates||[];
+  let h=`<div class="result-section"><div class="next-step-card" style="margin-bottom:10px">💡 <strong>${candidates.length} resumes detected — no JD uploaded.</strong><br/><span style="color:var(--muted2)">Paste or upload a Job Description to rank these candidates.</span></div>
+  <div class="rcard"><div class="rcard-head"><span class="rcard-title">Resume Summary — ${candidates.length} Candidates</span></div><table class="rank-table"><thead><tr><th>#</th><th>Name</th><th>Exp</th><th>Current Role</th><th>Gap Status</th><th>Top Skills</th></tr></thead><tbody>`;
+  candidates.forEach((c,i)=>{
+    const verdict=c.verdict||'CLEAN',col=verdict==='CLEAN'?'vb-green':'vb-amber';
+    const skills=(c.skills_extracted||[]).slice(0,4).map(s=>`${s.skill}(${s.years}y)`).join(', ');
+    h+=`<tr><td><span class="rank-num rn-other" style="width:22px;height:22px;font-size:.72rem">${i+1}</span></td><td style="font-weight:600;color:var(--text)">${c.name||'—'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td style="font-size:.72rem;color:var(--muted2)">${c.current_role||'—'}</td><td><span class="vbadge ${col}" style="font-size:.62rem">${verdict}${c.total_gap_months>0?' · '+c.total_gap_months+'mo gap':''}</span></td><td style="font-size:.7rem;color:var(--muted2)">${skills||'—'}</td></tr>`;
+  });
+  h+=`</tbody></table></div></div>`;
+  return h;
+}
+
+// ── CTC Verification ──────────────────────────────────────────────────────────
+function renderCTCVerification(data){
+  if(!data) return '';
+  const overallBadge=data.overall_verdict==='GENUINE'?'vb-green':data.overall_verdict==='SUSPICIOUS'?'vb-amber':'vb-red';
+  const infClass=v=>v==='NORMAL'?'inf-normal':v==='INFLATED'?'inf-inflated':'inf-high';
+  const pctStr=p=>p!=null?(p>0?'+':'')+p.toFixed(1)+'%':'—';
+
+  let h=`<div class="result-section"><div class="verdict-hero"><div class="verdict-info"><div class="verdict-row"><span class="verdict-title">CTC Verification</span><span class="vbadge ${overallBadge}">${data.overall_verdict}</span><span class="vbadge" style="background:var(--bg3);color:var(--muted2);border-color:var(--border)">${data.confidence} confidence</span></div><div class="verdict-reason">${data.overall_verdict_reason||''}</div><div class="verdict-meta">Claimed: <strong style="color:var(--text)">₹${data.claimed_ctc_lpa?.toFixed(2)||(data.claimed_ctc/100000).toFixed(2)} LPA</strong> &nbsp;·&nbsp; Sources: ${(data.sources_used||[]).join(' + ')||'—'}</div></div></div>`;
+
+  if(data.salary_slip?.present){
+    const s=data.salary_slip;
+    const sBadge=s.verdict==='GENUINE'?'vb-green':s.verdict==='SUSPICIOUS'?'vb-amber':'vb-red';
+    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📄 Salary Slip</span><span class="vbadge ${sBadge}" style="font-size:.62rem">${s.verdict||'—'} · ${s.overall_score!=null?s.overall_score+'/100':'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Gross/month</div><div class="ctc-stat-val">₹${s.extracted?.gross?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${s.derived_annual_ctc?(s.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(s.inflation_verdict)}">${pctStr(s.inflation_percent)} <span style="font-size:.65rem">${s.inflation_verdict||''}</span></div></div></div>`;
+    if(s.rule_checks?.length){h+=`<div class="check-list">`;s.rule_checks.slice(0,5).forEach(c=>{h+=`<div class="check-item">${checkIcon(c.status==='pass'?'PASS':c.status==='neutral'?'WARN':'FAIL')}<span>${c.name}: <span style="color:var(--muted2)">${c.finding}</span></span></div>`;});h+=`</div>`;}
+    if(s.red_flags?.length){h+=`<div style="margin-top:8px"><div class="flag-list">`;s.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div>`;}
+    h+=`</div></div>`;
   }
-
-  h+=`<div style="margin-top:8px;padding:10px 12px;background:var(--amber-dim);border:1px solid rgba(245,166,35,0.2);border-radius:8px;font-size:.76rem;color:var(--amber)">💡 Upload the candidate's resume to run the full skill match scorecard</div>`;
+  if(data.pf_analysis?.present){
+    const p=data.pf_analysis;
+    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📋 PF History</span><span class="vbadge ${p.consistency==='CONSISTENT'?'vb-green':p.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${p.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Avg PF/month</div><div class="ctc-stat-val">₹${p.avg_pf_monthly?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Basic</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_basic?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_annual_ctc?(p.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div></div><div class="ctc-stat-row" style="margin-top:-2px"><div class="ctc-stat" style="grid-column:1/3"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(p.inflation_verdict)}">${pctStr(p.inflation_percent)} <span style="font-size:.65rem">${p.inflation_verdict||''}</span></div></div><div class="ctc-stat"><div class="ctc-stat-label">Entries</div><div class="ctc-stat-val" style="color:var(--muted2)">${p.pf_amounts?.length||0} months</div></div></div>${p.note?`<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${p.note}</div>`:''}</div></div>`;
+  }
+  if(data.bank_analysis?.present){
+    const b=data.bank_analysis;
+    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">🏦 Bank Statement</span><span class="vbadge ${b.consistency==='CONSISTENT'?'vb-green':b.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${b.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Credits found</div><div class="ctc-stat-val">${b.credits_found||0} months</div></div><div class="ctc-stat"><div class="ctc-stat-label">Avg Monthly</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.avg_monthly_credit?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.derived_annual_ctc?(b.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div></div><div class="ctc-stat-row" style="margin-top:-2px"><div class="ctc-stat" style="grid-column:1/-1"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(b.inflation_verdict)}">${pctStr(b.inflation_percent)} <span style="font-size:.65rem">${b.inflation_verdict||''}</span></div></div></div>${b.note?`<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${b.note}</div>`:''}</div></div>`;
+  }
+  if(data.red_flags?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;data.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div></div>`;}
+  if(data.positive_signals?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">✓ Positive Signals</span></div><div class="rcard-body"><div class="flag-list">`;data.positive_signals.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-green"></div>${f}</div>`;});h+=`</div></div></div>`;}
   return h+'</div>';
 }
 
 // ── Summarize for history ─────────────────────────────────────────────────────
-function summarize(data) {
+function summarize(data){
   const t=data.type||'';
-  if(t==='jd_resume') return `[JD Match] ${data.candidate?.name||'?'}: ${data.scorecard?.match_percentage||0}% — ${data.scorecard?.recommendation||'?'}`;
-  if(t==='multi_rank') return `[Ranking] ${data.candidates?.length||0} candidates ranked`;
-  if(t==='offer_letter') return `[Offer] ${data.verdict} (${data.overall_score}/100)`;
-  if(t==='salary_slip') return `[Salary] ${data.verdict} — CTC inflation: ${data.ctc_inflation?.verdict||'N/A'}`;
-  if(t==='employment') return `[Employment] ${data.verdict} — ${data.verdict_reason||''}`;
-  if(t==='ctc_verification') return `[CTC Check] ${data.overall_verdict} (${data.claimed_ctc_lpa?.toFixed(1) || '?'} LPA claimed) — ${data.confidence} confidence`;
+  if(t==='jd_resume')        return `[JD Match] ${data.candidate?.name||'?'}: ${data.scorecard?.match_percentage||0}% — ${data.scorecard?.recommendation||'?'}`;
+  if(t==='multi_rank')       return `[Ranking] ${data.candidates?.length||0} candidates ranked`;
+  if(t==='offer_letter')     return `[Offer] ${data.verdict} (${data.overall_score}/100)`;
+  if(t==='salary_slip')      return `[Salary] ${data.verdict} — CTC inflation: ${data.ctc_inflation?.verdict||'N/A'}`;
+  if(t==='employment')       return `[Employment] ${data.verdict} — ${data.verdict_reason||''}`;
+  if(t==='ctc_verification') return `[CTC Check] ${data.overall_verdict} (${data.claimed_ctc_lpa?.toFixed(1)||'?'} LPA claimed) — ${data.confidence} confidence`;
   return '[Analysis complete]';
 }
-
-// ── New session ───────────────────────────────────────────────────────────────
-function newSession() {
-  docs=[]; history=[]; started=false; busy=false; pendingCnt=0;
-  pendingCTCDocs=[]; pendingEPFODocs=[];
-  document.getElementById('messages').innerHTML='';
-  document.getElementById('chat-area').style.display='none';
-  document.getElementById('welcome').style.display='flex';
-  document.getElementById('files-row').innerHTML='';
-  document.getElementById('pending').classList.remove('show');
-  document.getElementById('send-btn').disabled=false;
-  document.getElementById('txt').value='';
-  hideCTCBar();
-  setStatus('Ready');
-}
-
-// ── Drag & drop ───────────────────────────────────────────────────────────────
-document.addEventListener('dragover',e=>{e.preventDefault();document.getElementById('drop-ov').classList.add('show');});
-document.getElementById('drop-ov').addEventListener('dragleave',e=>{if(!e.relatedTarget||!document.getElementById('drop-ov').contains(e.relatedTarget))document.getElementById('drop-ov').classList.remove('show');});
-document.addEventListener('drop',e=>{e.preventDefault();document.getElementById('drop-ov').classList.remove('show');handleFiles(e.dataTransfer.files);});
-
-  // ___MultipleResume & NO JD ____________________________________________________
-  function renderMultiResumeNoJD(data) {
-  const candidates = data.candidates || [];
-  let h = `<div class="result-section">
-  <div style="padding:10px 12px;background:var(--amber-dim);border:1px solid rgba(245,166,35,0.25);border-radius:8px;font-size:.78rem;color:var(--amber);margin-bottom:10px">
-    💡 <strong>${candidates.length} resumes detected — no JD uploaded.</strong><br/>
-    <span style="color:var(--muted2)">Paste or upload a Job Description to rank these candidates with skill scores.</span>
-  </div>
-  <div class="rcard">
-    <div class="rcard-head"><span class="rcard-title">Resume Summary — ${candidates.length} Candidates</span></div>
-    <table class="rank-table">
-      <thead><tr><th>#</th><th>Name</th><th>Exp</th><th>Current Role</th><th>Gap Status</th><th>Top Skills</th></tr></thead>
-      <tbody>`;
-  candidates.forEach((c, i) => {
-    const verdict = c.verdict || 'CLEAN';
-    const col = verdict === 'CLEAN' ? 'vb-green' : 'vb-amber';
-    const skills = (c.skills_extracted || []).slice(0, 4).map(s => `${s.skill}(${s.years}y)`).join(', ');
-    h += `<tr>
-      <td><span class="rank-num rn-other" style="width:22px;height:22px;font-size:.72rem">${i+1}</span></td>
-      <td style="font-weight:600;color:var(--text)">${c.name || '—'}</td>
-      <td class="skill-years">${c.total_experience_years || 0}y</td>
-      <td style="font-size:.72rem;color:var(--muted2)">${c.current_role || '—'}</td>
-      <td><span class="vbadge ${col}" style="font-size:.62rem">${verdict}${c.total_gap_months > 0 ? ' · '+c.total_gap_months+'mo gap' : ''}</span></td>
-      <td style="font-size:.7rem;color:var(--muted2)">${skills || '—'}</td>
-    </tr>`;
-  });
-  h += `</tbody></table></div></div>`;
-  return h;
-}
-// ── ADD: CTC Verification renderer ───────────────────────────────────────────
-function renderCTCVerification(data) {
-  if (!data) return '';
-
-  const overallColor = data.overall_verdict === 'GENUINE' ? 'var(--green)'
-    : data.overall_verdict === 'SUSPICIOUS' ? 'var(--amber)'
-    : data.overall_verdict === 'HIGHLY_INFLATED' ? 'var(--red)' : 'var(--muted2)';
-
-  const overallBadge = data.overall_verdict === 'GENUINE' ? 'vb-green'
-    : data.overall_verdict === 'SUSPICIOUS' ? 'vb-amber' : 'vb-red';
-
-  const infClass = v => v === 'NORMAL' ? 'inf-normal' : v === 'INFLATED' ? 'inf-inflated' : 'inf-high';
-  const pctStr = p => p != null ? (p > 0 ? '+' : '') + p.toFixed(1) + '%' : '—';
-
-  let h = `<div class="result-section">
-  <div class="verdict-hero">
-    <div class="verdict-info">
-      <div class="verdict-row">
-        <span class="verdict-title">CTC Verification</span>
-        <span class="vbadge ${overallBadge}">${data.overall_verdict}</span>
-        <span class="vbadge" style="background:var(--bg3);color:var(--muted2);border-color:var(--border)">${data.confidence} confidence</span>
-      </div>
-      <div class="verdict-reason">${data.overall_verdict_reason || ''}</div>
-      <div class="verdict-meta">Claimed: <strong style="color:var(--text)">₹${data.claimed_ctc_lpa?.toFixed(2) || (data.claimed_ctc/100000).toFixed(2)} LPA</strong>
-        &nbsp;·&nbsp; Sources: ${(data.sources_used || []).join(' + ') || '—'}
-      </div>
-    </div>
-  </div>`;
-
-  // ── Salary Slip card ──────────────────────────────────────────────────────
-  if (data.salary_slip?.present) {
-    const s = data.salary_slip;
-    const sColor = s.verdict === 'GENUINE' ? 'var(--green)' : s.verdict === 'SUSPICIOUS' ? 'var(--amber)' : 'var(--red)';
-    const sBadge = s.verdict === 'GENUINE' ? 'vb-green' : s.verdict === 'SUSPICIOUS' ? 'vb-amber' : 'vb-red';
-    h += `<div class="ctc-source-card">
-    <div class="ctc-source-head">
-      <span class="ctc-source-title">📄 Salary Slip</span>
-      <span class="vbadge ${sBadge}" style="font-size:.62rem">${s.verdict || '—'} · ${s.overall_score != null ? s.overall_score + '/100' : '—'}</span>
-    </div>
-    <div class="ctc-source-body">
-      <div class="ctc-stat-row">
-        <div class="ctc-stat"><div class="ctc-stat-label">Gross/month</div><div class="ctc-stat-val" style="color:var(--text)">₹${s.extracted?.gross?.toLocaleString('en-IN') || '—'}</div></div>
-        <div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${s.derived_annual_ctc ? (s.derived_annual_ctc/100000).toFixed(2)+'L' : '—'}</div></div>
-        <div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(s.inflation_verdict)}">${pctStr(s.inflation_percent)} <span style="font-size:.65rem">${s.inflation_verdict || ''}</span></div></div>
-      </div>`;
-    if (s.extracted?.employee_name || s.extracted?.company_name || s.extracted?.slip_month) {
-      h += `<div style="font-size:.73rem;color:var(--muted2);margin-bottom:8px">
-        ${s.extracted.employee_name ? '<span style="color:var(--text)">'+s.extracted.employee_name+'</span> · ' : ''}
-        ${s.extracted.company_name || ''} ${s.extracted.slip_month ? '· '+s.extracted.slip_month : ''}
-      </div>`;
-    }
-    if (s.rule_checks?.length) {
-      h += `<div class="check-list">`;
-      s.rule_checks.slice(0,5).forEach(c => {
-        h += `<div class="check-item">${checkIcon(c.status==='pass'?'PASS':c.status==='neutral'?'WARN':'FAIL')}<span>${c.name}: <span style="color:var(--muted2)">${c.finding}</span></span></div>`;
-      });
-      h += `</div>`;
-    }
-    if (s.red_flags?.length) {
-      h += `<div style="margin-top:8px"><div class="flag-list">`;
-      s.red_flags.forEach(f => { h += `<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`; });
-      h += `</div></div>`;
-    }
-    h += `</div></div>`;
-  }
-
-  // ── PF Analysis card ──────────────────────────────────────────────────────
-  if (data.pf_analysis?.present) {
-    const p = data.pf_analysis;
-    h += `<div class="ctc-source-card">
-    <div class="ctc-source-head">
-      <span class="ctc-source-title">📋 PF History</span>
-      <span class="vbadge ${p.consistency === 'CONSISTENT' ? 'vb-green' : p.consistency === 'INCONSISTENT' ? 'vb-red' : 'vb-amber'}" style="font-size:.62rem">${p.consistency || '—'}</span>
-    </div>
-    <div class="ctc-source-body">
-      <div class="ctc-stat-row">
-        <div class="ctc-stat"><div class="ctc-stat-label">Avg PF/month</div><div class="ctc-stat-val" style="color:var(--text)">₹${p.avg_pf_monthly?.toLocaleString('en-IN') || '—'}</div></div>
-        <div class="ctc-stat"><div class="ctc-stat-label">Derived Basic</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_basic?.toLocaleString('en-IN') || '—'}</div></div>
-        <div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_annual_ctc ? (p.derived_annual_ctc/100000).toFixed(2)+'L' : '—'}</div></div>
-      </div>
-      <div class="ctc-stat-row" style="margin-top:-2px">
-        <div class="ctc-stat" style="grid-column:1/3"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(p.inflation_verdict)}">${pctStr(p.inflation_percent)} <span style="font-size:.65rem">${p.inflation_verdict || ''}</span></div></div>
-        <div class="ctc-stat"><div class="ctc-stat-label">Entries</div><div class="ctc-stat-val" style="color:var(--muted2)">${p.pf_amounts?.length || 0} months</div></div>
-      </div>
-      ${p.note ? `<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${p.note}</div>` : ''}
-    </div></div>`;
-  }
-
-  // ── Bank Analysis card ─────────────────────────────────────────────────────
-  if (data.bank_analysis?.present) {
-    const b = data.bank_analysis;
-    h += `<div class="ctc-source-card">
-    <div class="ctc-source-head">
-      <span class="ctc-source-title">🏦 Bank Statement</span>
-      <span class="vbadge ${b.consistency === 'CONSISTENT' ? 'vb-green' : b.consistency === 'INCONSISTENT' ? 'vb-red' : 'vb-amber'}" style="font-size:.62rem">${b.consistency || '—'}</span>
-    </div>
-    <div class="ctc-source-body">
-      <div class="ctc-stat-row">
-        <div class="ctc-stat"><div class="ctc-stat-label">Credits found</div><div class="ctc-stat-val" style="color:var(--text)">${b.credits_found || 0} months</div></div>
-        <div class="ctc-stat"><div class="ctc-stat-label">Avg Monthly</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.avg_monthly_credit?.toLocaleString('en-IN') || '—'}</div></div>
-        <div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.derived_annual_ctc ? (b.derived_annual_ctc/100000).toFixed(2)+'L' : '—'}</div></div>
-      </div>
-      <div class="ctc-stat-row" style="margin-top:-2px">
-        <div class="ctc-stat" style="grid-column:1/-1"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(b.inflation_verdict)}">${pctStr(b.inflation_percent)} <span style="font-size:.65rem">${b.inflation_verdict || ''}</span></div></div>
-      </div>
-      ${b.note ? `<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${b.note}</div>` : ''}
-    </div></div>`;
-  }
-
-  // ── Red flags + Positive signals ──────────────────────────────────────────
-  if (data.red_flags?.length) {
-    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;
-    data.red_flags.forEach(f => { h += `<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`; });
-    h += `</div></div></div>`;
-  }
-  if (data.positive_signals?.length) {
-    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">✓ Positive Signals</span></div><div class="rcard-body"><div class="flag-list">`;
-    data.positive_signals.forEach(f => { h += `<div class="flag-item"><div class="flag-dot fd-green"></div>${f}</div>`; });
-    h += `</div></div></div>`;
-  }
-
-  return h + '</div>';
-}
-  
 </script>
 </body>
 </html>
