@@ -726,6 +726,7 @@ function renderResult(data, bub) {
   else if (t==='jd_only')     bub.innerHTML=renderJDOnly(data);
   else if (t==='combined')    bub.innerHTML=renderJD(data.jd_match||data)+'<div style="margin:10px 0 6px;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--font-head)">── Employment Check ──</div>'+renderEmployment(data.employment_check||{});
   else if (data.scorecard||data.skill_match) bub.innerHTML=renderJD(data);
+  else if (t === 'multi_resume_nojd') bub.innerHTML = header + renderMultiResumeNoJD(data);
   else bub.innerHTML=md(data.reply||JSON.stringify(data,null,2));
 }
 
@@ -1170,6 +1171,36 @@ function newSession() {
 document.addEventListener('dragover',e=>{e.preventDefault();document.getElementById('drop-ov').classList.add('show');});
 document.getElementById('drop-ov').addEventListener('dragleave',e=>{if(!e.relatedTarget||!document.getElementById('drop-ov').contains(e.relatedTarget))document.getElementById('drop-ov').classList.remove('show');});
 document.addEventListener('drop',e=>{e.preventDefault();document.getElementById('drop-ov').classList.remove('show');handleFiles(e.dataTransfer.files);});
+
+  // ___MultipleResume & NO JD ____________________________________________________
+  function renderMultiResumeNoJD(data) {
+  const candidates = data.candidates || [];
+  let h = `<div class="result-section">
+  <div style="padding:10px 12px;background:var(--amber-dim);border:1px solid rgba(245,166,35,0.25);border-radius:8px;font-size:.78rem;color:var(--amber);margin-bottom:10px">
+    💡 <strong>${candidates.length} resumes detected — no JD uploaded.</strong><br/>
+    <span style="color:var(--muted2)">Paste or upload a Job Description to rank these candidates with skill scores.</span>
+  </div>
+  <div class="rcard">
+    <div class="rcard-head"><span class="rcard-title">Resume Summary — ${candidates.length} Candidates</span></div>
+    <table class="rank-table">
+      <thead><tr><th>#</th><th>Name</th><th>Exp</th><th>Current Role</th><th>Gap Status</th><th>Top Skills</th></tr></thead>
+      <tbody>`;
+  candidates.forEach((c, i) => {
+    const verdict = c.verdict || 'CLEAN';
+    const col = verdict === 'CLEAN' ? 'vb-green' : 'vb-amber';
+    const skills = (c.skills_extracted || []).slice(0, 4).map(s => `${s.skill}(${s.years}y)`).join(', ');
+    h += `<tr>
+      <td><span class="rank-num rn-other" style="width:22px;height:22px;font-size:.72rem">${i+1}</span></td>
+      <td style="font-weight:600;color:var(--text)">${c.name || '—'}</td>
+      <td class="skill-years">${c.total_experience_years || 0}y</td>
+      <td style="font-size:.72rem;color:var(--muted2)">${c.current_role || '—'}</td>
+      <td><span class="vbadge ${col}" style="font-size:.62rem">${verdict}${c.total_gap_months > 0 ? ' · '+c.total_gap_months+'mo gap' : ''}</span></td>
+      <td style="font-size:.7rem;color:var(--muted2)">${skills || '—'}</td>
+    </tr>`;
+  });
+  h += `</tbody></table></div></div>`;
+  return h;
+}
 </script>
 </body>
 </html>
