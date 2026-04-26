@@ -203,7 +203,28 @@ input[type=file]{display:none}
 .flag-item{display:flex;gap:7px;align-items:flex-start;font-size:.77rem;color:var(--muted2);line-height:1.5}
 .flag-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;margin-top:5px}
 .fd-red{background:var(--red)}.fd-green{background:var(--green)}.fd-amber{background:var(--amber)}
+  
+/* ── CTC prompt bar ── */
+#ctc-bar{display:none;align-items:center;gap:10px;padding:10px 18px;background:rgba(245,166,35,0.07);border-top:1px solid rgba(245,166,35,0.2);flex-shrink:0}
+#ctc-bar.show{display:flex}
+.ctc-bar-label{font-size:.76rem;color:var(--muted2);white-space:nowrap}
+.ctc-bar-label strong{color:var(--amber)}
+#ctc-input{flex:1;background:var(--bg3);border:1px solid rgba(245,166,35,0.3);border-radius:7px;padding:6px 12px;color:var(--text);font-size:.82rem;outline:none;font-family:var(--font-body)}
+#ctc-input:focus{border-color:var(--amber)}
+#ctc-submit{padding:6px 16px;background:var(--amber);color:#000;border:none;border-radius:7px;font-size:.76rem;font-weight:700;cursor:pointer;font-family:var(--font-body);white-space:nowrap}
+#ctc-submit:hover{background:#f5c518}
 
+/* ── CTC verification result cards ── */
+.ctc-source-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+.ctc-source-head{padding:9px 14px;background:var(--bg3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ctc-source-title{font-size:.65rem;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted2);font-family:var(--font-head)}
+.ctc-source-body{padding:12px 14px}
+.ctc-stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.ctc-stat{background:var(--bg3);border-radius:6px;padding:9px 11px}
+.ctc-stat-label{font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.ctc-stat-val{font-size:.88rem;font-weight:700;font-family:var(--font-head)}
+.inf-normal{color:var(--green)} .inf-inflated{color:var(--amber)} .inf-high{color:var(--red)}
+  
 /* CTC box */
 .ctc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:8px}
 .ctc-item{background:var(--bg3);border-radius:7px;padding:9px 11px}
@@ -314,6 +335,14 @@ input[type=file]{display:none}
   <!-- File chips -->
   <div id="files-row"></div>
 
+  <!-- CTC prompt bar (shown when salary/pf/bank uploaded without CTC) -->
+<div id="ctc-bar">
+  <span class="ctc-bar-label">💰 <strong>Candidate CTC?</strong> Enter claimed CTC (LPA):</span>
+  <input id="ctc-input" type="number" placeholder="e.g. 12.5" step="0.1" min="0"
+    onkeydown="if(event.key==='Enter')submitCTC()"/>
+  <button id="ctc-submit" onclick="submitCTC()">Verify →</button>
+</div>
+  
   <!-- Input bar -->
   <div id="input-bar">
     <div class="input-wrap">
@@ -355,12 +384,14 @@ let history    = [];       // {role, content, _resumeText?, _resumeFileName?}
 let busy       = false;
 let started    = false;
 let pendingCnt = 0;
+let pendingCTCDocs = [];   // docs waiting for CTC input
+let pendingEPFODocs = [];  // epfo docs waiting for resume upload
 
 const MODE_LABELS = {
   auto:'auto-detect', jd:'JD vs Resume', multi:'Multi Resume Rank',
   offer:'Offer Letter', ctc:'CTC Verification', service:'Service History'
 };
-
+  
 // ── Doc type detector ─────────────────────────────────────────────────────────
 function detectType(text, fileName) {
   const t = (text || '').toLowerCase();
@@ -418,7 +449,22 @@ function looksLikeJD(text) {
   const t = text.toLowerCase();
   return ['job description','we are looking for','responsibilities','requirements','mandatory skills','good to have','key responsibilities','role overview','experience required','skills required'].filter(s=>t.includes(s)).length >= 2;
 }
+  
+// ── ADD: CTC bar helpers ──────────────────────────────────────────────────────
+function showCTCBar() { document.getElementById('ctc-bar').classList.add('show'); document.getElementById('ctc-input').focus(); }
+function hideCTCBar() { document.getElementById('ctc-bar').classList.remove('show'); document.getElementById('ctc-input').value=''; }
 
+function submitCTC() {
+  const val = parseFloat(document.getElementById('ctc-input').value);
+  if (!val || val <= 0) { document.getElementById('ctc-input').style.borderColor='var(--red)'; return; }
+  hideCTCBar();
+  const ctcInRupees = val * 100000;
+  const snap = [...pendingCTCDocs];
+  pendingCTCDocs = [];
+  addMsg('user', `💰 Claimed CTC: ₹${val} LPA`);
+  callAgent(snap, ctcInRupees);
+}
+  
 // ── File extraction ───────────────────────────────────────────────────────────
 async function extractPDF(file) {
   try {
@@ -481,7 +527,22 @@ async function handleFiles(fileList) {
     pendingCnt--;
     updatePending();
   }));
-
+  
+  function checkEPFOResumeCombo() {
+  const types = docs.map(d => d.detectedType);
+  const hasEPFO = types.includes('epfo');
+  const hasResume = types.includes('resume');
+  // If we had pending EPFO docs and now resume arrived, auto-combine
+  if (pendingEPFODocs.length > 0 && hasResume) {
+    const snap = [...pendingEPFODocs];
+    pendingEPFODocs = [];
+    const resumeDocs = docs.filter(d => d.detectedType === 'resume');
+    docs = docs.filter(d => d.detectedType !== 'resume');
+    document.getElementById('files-row').innerHTML = '';
+    const userMsg = `Resume + Service History — verifying employment…`;
+    callAgent([...snap, ...resumeDocs], null, userMsg);
+  }
+}
   document.getElementById('file-in').value='';
 }
 
@@ -590,17 +651,12 @@ function getResumeCtx() {
   }
   return null;
 }
-function getAllResumesCtx() {
-  // Current docs first
+  function getAllResumesCtx() {
   const fromDocs = docs.filter(d => d.detectedType === 'resume');
   if (fromDocs.length > 0) return fromDocs.map(d => ({ text: d.text, fileName: d.fileName }));
-
-  // History — prefer _allResumes, fall back to _resumeText
   for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i]._allResumes && history[i]._allResumes.length > 0)
-      return history[i]._allResumes;
-    if (history[i]._resumeText)
-      return [{ text: history[i]._resumeText, fileName: history[i]._resumeFileName || 'resume.pdf' }];
+    if (history[i]._allResumes && history[i]._allResumes.length > 0) return history[i]._allResumes;
+    if (history[i]._resumeText) return [{ text: history[i]._resumeText, fileName: history[i]._resumeFileName || 'resume.pdf' }];
   }
   return [];
 }
@@ -611,50 +667,49 @@ function autoResize(el) { el.style.height='auto'; el.style.height=Math.min(el.sc
 
 async function send() {
   if (busy) return;
-  const input=document.getElementById('txt');
-  const text=input.value.trim();
-  if (!text && docs.length===0) return;
-  if (!text && docs.length>0) { runAnalysis(); return; }
+  const input = document.getElementById('txt');
+  const text = input.value.trim();
+  if (!text && docs.length === 0) return;
+  if (!text && docs.length > 0) { runAnalysis(); return; }
 
   // JD pasted as text
   if (looksLikeJD(text)) {
     const resumeCtxList = getAllResumesCtx();
-    if (resumeCtxList.length===0) {
-      input.value=''; autoResize(input);
-      addMsg('user','📋 JD pasted');
-      addMsg('agent','⚠️ **No resume uploaded yet.**\n\nPlease upload the candidate resume first using the 📎 button, then paste the JD — I\'ll run the skill match automatically.');
+    if (resumeCtxList.length === 0) {
+      input.value = ''; autoResize(input);
+      addMsg('user', '📋 JD pasted');
+      addMsg('agent', '⚠️ **No resume uploaded yet.**\n\nPlease upload the candidate resume first using the 📎 button, then paste the JD — I\'ll run the skill match automatically.');
       return;
     }
-    input.value=''; autoResize(input);
-    // Build docs list: JD + all resumes from context
-    const jdDoc={id:'jd_'+Date.now(),fileName:'pasted_jd.txt',text,detectedType:'jd'};
-    const resumeDocs=resumeCtxList.map((r,i)=>({id:'res_'+Date.now()+'_'+i,fileName:r.fileName,text:r.text,detectedType:'resume'}));
-    const label = resumeDocs.length>1 ? `📋 JD + ${resumeDocs.length} resumes — ranking candidates…` : '📋 JD detected — matching against resume…';
-    addMsg('user',label);
-    history.push({role:'user',content:'JD analysis'});
-    await callAgent([jdDoc,...resumeDocs], null);
+    input.value = ''; autoResize(input);
+    const jdDoc = { id: 'jd_' + Date.now(), fileName: 'pasted_jd.txt', text, detectedType: 'jd' };
+    const resumeDocs = resumeCtxList.map((r, i) => ({ id: 'res_' + Date.now() + '_' + i, fileName: r.fileName, text: r.text, detectedType: 'resume' }));
+    const label = resumeDocs.length > 1 ? `📋 JD + ${resumeDocs.length} resumes — ranking candidates…` : '📋 JD detected — matching against resume…';
+    addMsg('user', label);
+    history.push({ role: 'user', content: 'JD analysis' });
+    await callAgent([jdDoc, ...resumeDocs], null);
     return;
   }
 
   // Normal text message
-  input.value=''; autoResize(input);
-  addMsg('user',text);
-  history.push({role:'user',content:text});
-  busy=true;
-  document.getElementById('send-btn').disabled=true;
+  input.value = ''; autoResize(input);
+  addMsg('user', text);
+  history.push({ role: 'user', content: text });
+  busy = true;
+  document.getElementById('send-btn').disabled = true;
   addTyping(); setStatus('Thinking…');
 
   try {
-    const res=await fetch('/.netlify/functions/agent',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:text,history:history.slice(-8),mode:mode!=='auto'?mode:undefined})});
-    if(!res.ok) throw new Error('Server '+res.status);
-    const data=await res.json();
+    const res = await fetch('/.netlify/functions/agent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history: history.slice(-8), mode: mode !== 'auto' ? mode : undefined }) });
+    if (!res.ok) throw new Error('Server ' + res.status);
+    const data = await res.json();
     removeTyping();
-    if(data.error) addMsg('agent','⚠️ '+data.error);
-    else { addMsg('agent',data.reply||''); history.push({role:'assistant',content:data.reply||''}); }
-  } catch(e) { removeTyping(); addMsg('agent','⚠️ '+e.message); }
+    if (data.error) addMsg('agent', '⚠️ ' + data.error);
+    else { addMsg('agent', data.reply || ''); history.push({ role: 'assistant', content: data.reply || '' }); }
+  } catch (e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
 
-  busy=false;
-  document.getElementById('send-btn').disabled=false;
+  busy = false;
+  document.getElementById('send-btn').disabled = false;
   setStatus('Ready');
 }
 
@@ -672,49 +727,92 @@ async function runAnalysis() {
 // ── Core API call ─────────────────────────────────────────────────────────────
 async function callAgent(docList, claimedCTC, userMsg) {
   if (busy) return;
-  busy=true;
-  document.getElementById('send-btn').disabled=true;
-  if (userMsg) addMsg('user',userMsg);
-  history.push({role:'user',content:userMsg||'analyze'});
+  busy = true;
+  document.getElementById('send-btn').disabled = true;
+
+  if (userMsg) addMsg('user', userMsg);
+  history.push({ role: 'user', content: userMsg || 'analyze' });
+
   addTyping(); setStatus('Analyzing…');
+
   try {
-    const payload=docList.map(d=>({
-      id:d.id, fileName:d.fileName,
-      text:d.base64Image?'':d.text,
-      detectedType:d.detectedType,
-      ...(d.base64Image?{base64Image:d.base64Image,imageMediaType:d.imageMediaType}:{})
+    const payload = docList.map(d => ({
+      id: d.id, fileName: d.fileName,
+      text: d.base64Image ? '' : d.text,
+      detectedType: d.detectedType,
+      ...(d.base64Image ? { base64Image: d.base64Image, imageMediaType: d.imageMediaType } : {})
     }));
-    const res=await fetch('/.netlify/functions/agent',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({documents:payload,history:history.slice(-6),claimedCTC,mode:mode!=='auto'?mode:undefined})
+
+    const res = await fetch('/.netlify/functions/agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ documents: payload, history: history.slice(-6), claimedCTC, mode: mode !== 'auto' ? mode : undefined })
     });
-    if(!res.ok) throw new Error('Server '+res.status);
-    const data=await res.json();
+
+    if (!res.ok) throw new Error('Server ' + res.status);
+    const data = await res.json();
     removeTyping();
-    if(data.error) {
-      addMsg('agent','⚠️ '+data.error);
-    } else {
-      // FIX 1: always store ALL resumes (works for 1 or many)
-      const allResumes=docList.filter(d=>d.detectedType==='resume');
-      if (allResumes.length>0) {
-        history[history.length-1]._allResumes=allResumes.map(r=>({text:r.text,fileName:r.fileName}));
-        history[history.length-1]._resumeText=allResumes[0].text;
-        history[history.length-1]._resumeFileName=allResumes[0].fileName;
+
+    // ── NEW: handle needs_ctc signal ──────────────────────────────────────────
+    if (data.type === 'needs_ctc') {
+      pendingCTCDocs = docList;
+      const docNames = data.detected_docs.map(d => `${d.fileName} (${d.detectedType})`).join(', ');
+      addMsg('agent', `📂 Detected: **${docNames}**\n\nTo verify CTC inflation, I need the candidate's **claimed CTC**. Enter it in the bar below ↓`);
+      showCTCBar();
+      busy = false;
+      document.getElementById('send-btn').disabled = false;
+      setStatus('Waiting for CTC…');
+      return;
+    }
+
+    // ── NEW: handle needs_resume_for_epfo signal ───────────────────────────────
+    if (data.type === 'needs_resume_for_epfo') {
+      pendingEPFODocs = docList;
+      // Check if resume already in history
+      const existingResumes = getAllResumesCtx();
+      if (existingResumes.length > 0) {
+        // Resume already uploaded — combine and analyze
+        const resumeDocs = existingResumes.map((r, i) => ({
+          id: 'res_hist_' + i, fileName: r.fileName, text: r.text, detectedType: 'resume'
+        }));
+        busy = false;
+        document.getElementById('send-btn').disabled = false;
+        await callAgent([...docList, ...resumeDocs], claimedCTC, null);
+        return;
       }
-      addMsg('agent', bub=>renderResult(data,bub));
-      history.push({role:'assistant',content:summarize(data)});
-      // FIX 2: prompt user to paste JD after multi-resume no-JD analysis
-      if (data.type==='multi_resume_nojd') {
+      addMsg('agent', `📋 **EPFO Service History detected.**\n\nTo cross-verify employment, I need the **candidate's resume** too.\n\nPlease upload the resume using the 📎 button — I'll automatically run the verification.`);
+      busy = false;
+      document.getElementById('send-btn').disabled = false;
+      setStatus('Waiting for resume…');
+      return;
+    }
+
+    if (data.error) {
+      addMsg('agent', '⚠️ ' + data.error);
+    } else {
+      // Store all resumes for follow-up
+      const allResumes = docList.filter(d => d.detectedType === 'resume');
+      if (allResumes.length > 0) {
+        history[history.length - 1]._allResumes = allResumes.map(r => ({ text: r.text, fileName: r.fileName }));
+        history[history.length - 1]._resumeText = allResumes[0].text;
+        history[history.length - 1]._resumeFileName = allResumes[0].fileName;
+      }
+
+      addMsg('agent', bub => renderResult(data, bub));
+      history.push({ role: 'assistant', content: summarize(data) });
+
+      // Prompt for JD after multi-resume no-JD
+      if (data.type === 'multi_resume_nojd') {
         addMsg('agent', `📋 **${data.candidates?.length || ''} resumes analysed.** Paste or type a **Job Description** below — I'll rank all candidates with skill scores instantly.`);
       }
     }
-  } catch(e) { removeTyping(); addMsg('agent','⚠️ '+e.message); }
-  busy=false;
-  document.getElementById('send-btn').disabled=false;
+  } catch (e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
+
+  busy = false;
+  document.getElementById('send-btn').disabled = false;
   setStatus('Ready');
 }
-
+  
 // ══════════════════════════════════════════════════════════════════════════════
 //  RENDERERS
 // ══════════════════════════════════════════════════════════════════════════════
@@ -729,6 +827,7 @@ function renderResult(data, bub) {
   else if (t==='combined')    bub.innerHTML=renderJD(data.jd_match||data)+'<div style="margin:10px 0 6px;font-size:.68rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-family:var(--font-head)">── Employment Check ──</div>'+renderEmployment(data.employment_check||{});
   else if (data.scorecard||data.skill_match) bub.innerHTML=renderJD(data);
   else if (t === 'multi_resume_nojd') bub.innerHTML = renderMultiResumeNoJD(data);
+  else if (t === 'ctc_verification') bub.innerHTML = renderCTCVerification(data);
   else bub.innerHTML=md(data.reply||JSON.stringify(data,null,2));
 }
 
@@ -1153,6 +1252,7 @@ function summarize(data) {
   if(t==='offer_letter') return `[Offer] ${data.verdict} (${data.overall_score}/100)`;
   if(t==='salary_slip') return `[Salary] ${data.verdict} — CTC inflation: ${data.ctc_inflation?.verdict||'N/A'}`;
   if(t==='employment') return `[Employment] ${data.verdict} — ${data.verdict_reason||''}`;
+  if(t==='ctc_verification') return `[CTC Check] ${data.overall_verdict} (${data.claimed_ctc_lpa?.toFixed(1) || '?'} LPA claimed) — ${data.confidence} confidence`;
   return '[Analysis complete]';
 }
 
@@ -1203,6 +1303,130 @@ document.addEventListener('drop',e=>{e.preventDefault();document.getElementById(
   h += `</tbody></table></div></div>`;
   return h;
 }
+// ── ADD: CTC Verification renderer ───────────────────────────────────────────
+function renderCTCVerification(data) {
+  if (!data) return '';
+
+  const overallColor = data.overall_verdict === 'GENUINE' ? 'var(--green)'
+    : data.overall_verdict === 'SUSPICIOUS' ? 'var(--amber)'
+    : data.overall_verdict === 'HIGHLY_INFLATED' ? 'var(--red)' : 'var(--muted2)';
+
+  const overallBadge = data.overall_verdict === 'GENUINE' ? 'vb-green'
+    : data.overall_verdict === 'SUSPICIOUS' ? 'vb-amber' : 'vb-red';
+
+  const infClass = v => v === 'NORMAL' ? 'inf-normal' : v === 'INFLATED' ? 'inf-inflated' : 'inf-high';
+  const pctStr = p => p != null ? (p > 0 ? '+' : '') + p.toFixed(1) + '%' : '—';
+
+  let h = `<div class="result-section">
+  <div class="verdict-hero">
+    <div class="verdict-info">
+      <div class="verdict-row">
+        <span class="verdict-title">CTC Verification</span>
+        <span class="vbadge ${overallBadge}">${data.overall_verdict}</span>
+        <span class="vbadge" style="background:var(--bg3);color:var(--muted2);border-color:var(--border)">${data.confidence} confidence</span>
+      </div>
+      <div class="verdict-reason">${data.overall_verdict_reason || ''}</div>
+      <div class="verdict-meta">Claimed: <strong style="color:var(--text)">₹${data.claimed_ctc_lpa?.toFixed(2) || (data.claimed_ctc/100000).toFixed(2)} LPA</strong>
+        &nbsp;·&nbsp; Sources: ${(data.sources_used || []).join(' + ') || '—'}
+      </div>
+    </div>
+  </div>`;
+
+  // ── Salary Slip card ──────────────────────────────────────────────────────
+  if (data.salary_slip?.present) {
+    const s = data.salary_slip;
+    const sColor = s.verdict === 'GENUINE' ? 'var(--green)' : s.verdict === 'SUSPICIOUS' ? 'var(--amber)' : 'var(--red)';
+    const sBadge = s.verdict === 'GENUINE' ? 'vb-green' : s.verdict === 'SUSPICIOUS' ? 'vb-amber' : 'vb-red';
+    h += `<div class="ctc-source-card">
+    <div class="ctc-source-head">
+      <span class="ctc-source-title">📄 Salary Slip</span>
+      <span class="vbadge ${sBadge}" style="font-size:.62rem">${s.verdict || '—'} · ${s.overall_score != null ? s.overall_score + '/100' : '—'}</span>
+    </div>
+    <div class="ctc-source-body">
+      <div class="ctc-stat-row">
+        <div class="ctc-stat"><div class="ctc-stat-label">Gross/month</div><div class="ctc-stat-val" style="color:var(--text)">₹${s.extracted?.gross?.toLocaleString('en-IN') || '—'}</div></div>
+        <div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${s.derived_annual_ctc ? (s.derived_annual_ctc/100000).toFixed(2)+'L' : '—'}</div></div>
+        <div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(s.inflation_verdict)}">${pctStr(s.inflation_percent)} <span style="font-size:.65rem">${s.inflation_verdict || ''}</span></div></div>
+      </div>`;
+    if (s.extracted?.employee_name || s.extracted?.company_name || s.extracted?.slip_month) {
+      h += `<div style="font-size:.73rem;color:var(--muted2);margin-bottom:8px">
+        ${s.extracted.employee_name ? '<span style="color:var(--text)">'+s.extracted.employee_name+'</span> · ' : ''}
+        ${s.extracted.company_name || ''} ${s.extracted.slip_month ? '· '+s.extracted.slip_month : ''}
+      </div>`;
+    }
+    if (s.rule_checks?.length) {
+      h += `<div class="check-list">`;
+      s.rule_checks.slice(0,5).forEach(c => {
+        h += `<div class="check-item">${checkIcon(c.status==='pass'?'PASS':c.status==='neutral'?'WARN':'FAIL')}<span>${c.name}: <span style="color:var(--muted2)">${c.finding}</span></span></div>`;
+      });
+      h += `</div>`;
+    }
+    if (s.red_flags?.length) {
+      h += `<div style="margin-top:8px"><div class="flag-list">`;
+      s.red_flags.forEach(f => { h += `<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`; });
+      h += `</div></div>`;
+    }
+    h += `</div></div>`;
+  }
+
+  // ── PF Analysis card ──────────────────────────────────────────────────────
+  if (data.pf_analysis?.present) {
+    const p = data.pf_analysis;
+    h += `<div class="ctc-source-card">
+    <div class="ctc-source-head">
+      <span class="ctc-source-title">📋 PF History</span>
+      <span class="vbadge ${p.consistency === 'CONSISTENT' ? 'vb-green' : p.consistency === 'INCONSISTENT' ? 'vb-red' : 'vb-amber'}" style="font-size:.62rem">${p.consistency || '—'}</span>
+    </div>
+    <div class="ctc-source-body">
+      <div class="ctc-stat-row">
+        <div class="ctc-stat"><div class="ctc-stat-label">Avg PF/month</div><div class="ctc-stat-val" style="color:var(--text)">₹${p.avg_pf_monthly?.toLocaleString('en-IN') || '—'}</div></div>
+        <div class="ctc-stat"><div class="ctc-stat-label">Derived Basic</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_basic?.toLocaleString('en-IN') || '—'}</div></div>
+        <div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_annual_ctc ? (p.derived_annual_ctc/100000).toFixed(2)+'L' : '—'}</div></div>
+      </div>
+      <div class="ctc-stat-row" style="margin-top:-2px">
+        <div class="ctc-stat" style="grid-column:1/3"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(p.inflation_verdict)}">${pctStr(p.inflation_percent)} <span style="font-size:.65rem">${p.inflation_verdict || ''}</span></div></div>
+        <div class="ctc-stat"><div class="ctc-stat-label">Entries</div><div class="ctc-stat-val" style="color:var(--muted2)">${p.pf_amounts?.length || 0} months</div></div>
+      </div>
+      ${p.note ? `<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${p.note}</div>` : ''}
+    </div></div>`;
+  }
+
+  // ── Bank Analysis card ─────────────────────────────────────────────────────
+  if (data.bank_analysis?.present) {
+    const b = data.bank_analysis;
+    h += `<div class="ctc-source-card">
+    <div class="ctc-source-head">
+      <span class="ctc-source-title">🏦 Bank Statement</span>
+      <span class="vbadge ${b.consistency === 'CONSISTENT' ? 'vb-green' : b.consistency === 'INCONSISTENT' ? 'vb-red' : 'vb-amber'}" style="font-size:.62rem">${b.consistency || '—'}</span>
+    </div>
+    <div class="ctc-source-body">
+      <div class="ctc-stat-row">
+        <div class="ctc-stat"><div class="ctc-stat-label">Credits found</div><div class="ctc-stat-val" style="color:var(--text)">${b.credits_found || 0} months</div></div>
+        <div class="ctc-stat"><div class="ctc-stat-label">Avg Monthly</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.avg_monthly_credit?.toLocaleString('en-IN') || '—'}</div></div>
+        <div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.derived_annual_ctc ? (b.derived_annual_ctc/100000).toFixed(2)+'L' : '—'}</div></div>
+      </div>
+      <div class="ctc-stat-row" style="margin-top:-2px">
+        <div class="ctc-stat" style="grid-column:1/-1"><div class="ctc-stat-label">Inflation vs Claimed</div><div class="ctc-stat-val ${infClass(b.inflation_verdict)}">${pctStr(b.inflation_percent)} <span style="font-size:.65rem">${b.inflation_verdict || ''}</span></div></div>
+      </div>
+      ${b.note ? `<div style="font-size:.72rem;color:var(--muted2);margin-top:4px">${b.note}</div>` : ''}
+    </div></div>`;
+  }
+
+  // ── Red flags + Positive signals ──────────────────────────────────────────
+  if (data.red_flags?.length) {
+    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;
+    data.red_flags.forEach(f => { h += `<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`; });
+    h += `</div></div></div>`;
+  }
+  if (data.positive_signals?.length) {
+    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">✓ Positive Signals</span></div><div class="rcard-body"><div class="flag-list">`;
+    data.positive_signals.forEach(f => { h += `<div class="flag-item"><div class="flag-dot fd-green"></div>${f}</div>`; });
+    h += `</div></div></div>`;
+  }
+
+  return h + '</div>';
+}
+  
 </script>
 </body>
 </html>
