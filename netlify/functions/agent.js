@@ -183,6 +183,7 @@ function routeMode(documents, modeHint) {
   if (hasSalary || hasBank) return "salary_slip";
   if (numResumes >= 1 && hasEPFO) return "epfo_crosscheck";
   if (hasEPFO) return "epfo_only";
+  if (numResumes >= 2) return "multi_resume_nojd";  // resumes only, no JD
   if (numResumes >= 1) return "resume_only";
   return "unknown_docs";
 }
@@ -238,7 +239,9 @@ function buildPrompt(documents, claimedCTC, modeHint) {
     const label = (d.detectedType||"unknown").toUpperCase();
     if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE]`;
     // Give resumes more context so skills + dates can be fully parsed
-    const limit = (d.detectedType === "resume") ? 7000 : 4000;
+    const limit = d.detectedType === "resume" ? 7000
+            : d.detectedType === "epfo"   ? 3000   // PF docs are long, keep short
+            : 4000;
     return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"").slice(0, limit)}`;
   }).join("\n\n");
 
@@ -438,6 +441,18 @@ const SCHEMAS = {
   "verdict": "CLEAN"|"GAPS_FOUND",
   "verdict_reason": "string",
   "red_flags": ["string"]
+}`,
+
+  multi_resume_nojd: `{
+  "type": "multi_resume_nojd",
+  "message": "string",
+  "candidates": [
+    {"name": "string", "total_experience_years": number, "current_role": "string",
+     "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
+     "skills_extracted": [{"skill": "string", "years": number}],
+     "verdict": "CLEAN"|"GAPS_FOUND", "total_gap_months": number
+    }
+  ]
 }`,
 
   moonlighting: `{
