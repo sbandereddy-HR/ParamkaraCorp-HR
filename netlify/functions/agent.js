@@ -1,17 +1,16 @@
 // ParamkaraCorp-HR Agent — Netlify Serverless Function
-// Single-call architecture: one request → one Groq call → structured result
-// Supports: PDF text, DOCX text, images (vision), multi-doc cross-check
- 
+// FIXED: JD-in-message detection, strict JSON-only prompt, no story output
+
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL        = "llama-3.3-70b-versatile";
 const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
- 
+
 const CORS = {
   "Access-Control-Allow-Origin":  "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
- 
+
 // ── Groq caller ───────────────────────────────────────────────────────────────
 async function groq(messages, json = false, maxTokens = 3000) {
   const body = {
@@ -21,7 +20,7 @@ async function groq(messages, json = false, maxTokens = 3000) {
     max_tokens: maxTokens,
   };
   if (json) body.response_format = { type: "json_object" };
- 
+
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -30,12 +29,12 @@ async function groq(messages, json = false, maxTokens = 3000) {
     },
     body: JSON.stringify(body),
   });
- 
+
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`Groq error ${res.status}: ${err}`);
   }
- 
+
   const data    = await res.json();
   const content = data.choices?.[0]?.message?.content ?? "";
   if (json) {
@@ -45,7 +44,7 @@ async function groq(messages, json = false, maxTokens = 3000) {
   }
   return content;
 }
- 
+
 // ── Validators (zero API calls) ───────────────────────────────────────────────
 function validateGST(text) {
   if (!text) return { found: false, verdict: "NOT_FOUND" };
@@ -67,7 +66,7 @@ function validateGST(text) {
     verdict: gst[14] === expected ? "VALID" : "INVALID_CHECKSUM",
   };
 }
- 
+
 function validateCIN(text) {
   if (!text) return { found: false, verdict: "NOT_FOUND" };
   const m = text.match(/\b([LUlu][0-9]{5}[A-Za-z]{2}[0-9]{4}[A-Za-z]{3}[0-9]{6})\b/);
@@ -81,7 +80,7 @@ function validateCIN(text) {
   const valid = VALID_STATES.has(stateCode) && year >= 1850 && year <= new Date().getFullYear() && VALID_TYPES.has(companyType);
   return { found: true, raw: cin, valid, stateCode, year, companyType, verdict: valid ? "VALID" : "INVALID_FORMAT" };
 }
- 
+
 function extractAmt(text, ...labels) {
   if (!text) return null;
   for (const label of labels) {
@@ -94,8 +93,7 @@ function extractAmt(text, ...labels) {
   }
   return null;
 }
- 
-// ── FIX 5: Auto-extract CTC from document text ───────────────────────────────
+
 function extractCTCFromText(text) {
   if (!text) return null;
   const patterns = [
@@ -106,103 +104,102 @@ function extractCTCFromText(text) {
     const m = text.match(pat);
     if (m?.[1]) {
       const raw = parseFloat(m[1].replace(/,/g, ""));
-      if (!isNaN(raw) && raw > 0) {
-        return raw < 500 ? raw * 100000 : raw;
-      }
+      if (!isNaN(raw) && raw > 0) return raw < 500 ? raw * 100000 : raw;
     }
   }
   return null;
 }
- 
-// ── FIX 1: Document type detector — never returns undefined ──────────────────
+
+// ── FIX: Detect if a plain text message is a JD ──────────────────────────────
+function messageIsJD(text) {
+  if (!text || text.length < 80) return false;
+  const lower = text.toLowerCase();
+  const signals = [
+    'job description', 'we are looking for', 'responsibilities',
+    'requirements', 'qualifications', 'job title', 'about the role',
+    'mandatory skills', 'good to have', 'key responsibilities',
+    'role overview', 'experience required', 'skills required',
+    'what you will do', 'who we are looking',
+  ];
+  return signals.filter(s => lower.includes(s)).length >= 2;
+}
+
+// ── Document type detector ────────────────────────────────────────────────────
 function detectDocType(text, fileName) {
   try {
     const lower = (text || "").toLowerCase();
     const fileL = (fileName || "").toLowerCase();
- 
+
     if (fileL.includes("jd") || fileL.includes("job_desc") || fileL.includes("job-desc") ||
         lower.includes("job description") || lower.includes("we are looking for") ||
         lower.includes("job title") || lower.includes("about the role") ||
         (lower.includes("responsibilities") && lower.includes("requirements")))
       return "jd";
- 
+
     if (lower.includes("offer letter") || lower.includes("we are pleased to offer") ||
         lower.includes("joining date") ||
         (lower.includes("cost to company") && lower.includes("designation")))
       return "offer_letter";
- 
+
     if (lower.includes("salary slip") || lower.includes("payslip") || lower.includes("pay slip") ||
         lower.includes("gross earnings") || lower.includes("net pay") ||
         (lower.includes("basic") && lower.includes("hra") && lower.includes("pf")))
       return "salary_slip";
- 
+
     if (lower.includes("epfo") || lower.includes("service history") ||
         lower.includes("passbook") || lower.includes("uan") ||
         lower.includes("employees provident fund"))
       return "epfo";
- 
+
     if (lower.includes("experience letter") || lower.includes("employment certificate") ||
         (lower.includes("this is to certify") && lower.includes("employed")))
       return "exp_letter";
- 
+
     if (fileL.includes("resume") || fileL.includes("cv") ||
         lower.includes("curriculum vitae") ||
         (lower.includes("experience") && lower.includes("education") && lower.includes("skills")))
       return "resume";
- 
+
     return "unknown";
   } catch (e) {
-    console.error("detectDocType error:", e);
     return "unknown";
   }
 }
- 
-// ── FIX 2 & 3: Explicit routing — no fall-through to conversation ─────────────
+
+// ── Analysis mode router ──────────────────────────────────────────────────────
 function determineAnalysisMode(documents) {
   const types   = documents.map(d => d.detectedType || "unknown");
   const has     = (t) => types.includes(t);
- 
+
   const hasJD     = has("jd");
   const hasResume = has("resume") || has("exp_letter");
   const hasEPFO   = has("epfo");
   const hasSalary = has("salary_slip");
   const hasOffer  = has("offer_letter");
- 
-  // Moonlighting handled by caller (mode param)
-  // Combined: JD + Resume + (EPFO or Salary) → run both analyses
+
   if (hasJD && hasResume && (hasEPFO || hasSalary)) return "combined_jd_employment";
-  // JD + Resume
-  if (hasJD && hasResume) return "jd_resume";
-  // Single JD only — parse it, don't fall to chat
-  if (hasJD) return "jd_only";
-  // Offer + Salary together
+  if (hasJD && hasResume)  return "jd_resume";
+  if (hasJD)               return "jd_only";
   if (hasOffer && hasSalary) return "offer_salary";
-  // Offer alone
-  if (hasOffer) return "offer_letter";
-  // Salary + Resume
+  if (hasOffer)            return "offer_letter";
   if (hasSalary && hasResume) return "salary_resume";
-  // Salary alone
-  if (hasSalary) return "salary_slip";
-  // Resume + EPFO
+  if (hasSalary)           return "salary_slip";
   if (hasResume && hasEPFO) return "epfo_crosscheck";
-  // EPFO alone
-  if (hasEPFO) return "epfo_only";
-  // Resume alone — gap analysis
-  if (hasResume) return "resume_only";
-  // Fallback: analyse whatever was sent
+  if (hasEPFO)             return "epfo_only";
+  if (hasResume)           return "resume_only";
   return "unknown_docs";
 }
- 
+
 // ── JSON Schemas ──────────────────────────────────────────────────────────────
 const SCHEMAS = {
   moonlighting: `{
   "type": "moonlighting",
   "verdict": "LOW_RISK"|"MEDIUM_RISK"|"HIGH_RISK",
-  "verdict_reason": "string",
+  "verdict_reason": "string (max 20 words)",
   "signals": [{"signal": "string", "risk": "LOW"|"MEDIUM"|"HIGH"}],
   "recommendations": ["string"]
 }`,
- 
+
   jd_resume: `{
   "type": "jd_resume",
   "candidate": {"name": "string", "total_experience_years": number},
@@ -213,32 +210,30 @@ const SCHEMAS = {
     "mandatory_skills_met": number,
     "mandatory_skills_total": number,
     "recommendation": "SHORTLIST"|"MAYBE"|"REJECT",
-    "recommendation_reason": "string",
-    "strengths": ["string"],
-    "gaps": ["string"]
+    "recommendation_reason": "string (max 20 words)",
+    "strengths": ["string (max 8 words each)"],
+    "gaps": ["string (max 8 words each)"]
   }
 }`,
- 
+
   jd_only: `{
   "type": "jd_only",
   "jd_summary": {"role": "string", "company": "string|null", "ctc_range": "string|null"},
   "required_skills": [{"skill": "string", "mandatory": boolean, "years": number|null}],
   "notice": "Resume not uploaded — upload candidate resume to run skill match scorecard"
 }`,
- 
-  // FIX 3: Combined mode — two sections in one response
+
   combined_jd_employment: `{
   "type": "combined",
   "jd_match": {
     "candidate": {"name": "string", "total_experience_years": number},
-    "jd_skills": [{"skill": "string", "required_years": number|null, "mandatory": boolean}],
     "skill_match": [{"skill": "string", "required_years": number|null, "actual_years": number, "matched": boolean}],
     "scorecard": {
       "match_percentage": number,
       "mandatory_skills_met": number,
       "mandatory_skills_total": number,
       "recommendation": "SHORTLIST"|"MAYBE"|"REJECT",
-      "recommendation_reason": "string",
+      "recommendation_reason": "string (max 20 words)",
       "strengths": ["string"],
       "gaps": ["string"]
     }
@@ -246,20 +241,18 @@ const SCHEMAS = {
   "employment_check": {
     "mode": "epfo_crosscheck"|"gap_analysis",
     "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
-    "gaps": [{"from_company": "string", "from_date": "YYYY-MM", "to_company": "string", "to_date": "YYYY-MM", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG"}],
-    "epfo_match": [{"resume_company": "string", "verified_company": "string", "date_match": boolean}],
-    "only_in_resume": [{"company": "string", "flag": "string"}],
+    "gaps": [{"from_company": "string", "to_company": "string", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG"}],
     "verdict": "MATCH"|"PARTIAL"|"MISMATCH"|"CLEAN"|"GAPS_FOUND",
-    "verdict_reason": "string",
+    "verdict_reason": "string (max 20 words)",
     "red_flags": ["string"]
   }
 }`,
- 
+
   offer_letter: `{
   "type": "offer_letter",
   "overall_score": number,
   "verdict": "AUTHENTIC"|"SUSPICIOUS"|"FAKE",
-  "verdict_reason": "string",
+  "verdict_reason": "string (max 20 words)",
   "checks": {
     "company_legitimacy": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"},
     "ctc_format": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"},
@@ -271,13 +264,13 @@ const SCHEMAS = {
   "red_flags_list": ["string"],
   "positive_signals": ["string"]
 }`,
- 
+
   offer_salary: `{
   "type": "offer_salary",
   "offer_check": {
     "overall_score": number,
     "verdict": "AUTHENTIC"|"SUSPICIOUS"|"FAKE",
-    "verdict_reason": "string",
+    "verdict_reason": "string (max 20 words)",
     "checks": {
       "company_legitimacy": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"},
       "ctc_format": {"score": number, "status": "PASS"|"WARN"|"FAIL", "finding": "string"},
@@ -292,20 +285,20 @@ const SCHEMAS = {
   "salary_check": {
     "overall_score": number,
     "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE",
-    "verdict_reason": "string",
+    "verdict_reason": "string (max 20 words)",
     "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
     "red_flags": ["string"],
     "ctc_cross_check": "string"
   }
 }`,
- 
+
   salary_slip: `{
   "type": "salary_slip",
   "overall_score": number,
   "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE",
-  "verdict_reason": "string",
+  "verdict_reason": "string (max 20 words)",
   "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
-  "ai_reasoning": "string",
+  "ai_reasoning": "string (max 20 words)",
   "red_flags": ["string"],
   "positive_signals": ["string"],
   "ctc_inflation": {
@@ -315,15 +308,15 @@ const SCHEMAS = {
     "verdict": "NORMAL"|"INFLATED"|"HIGHLY_INFLATED"|"NO_CLAIM_TO_COMPARE"
   }
 }`,
- 
+
   salary_resume: `{
   "type": "salary_resume",
   "salary_check": {
     "overall_score": number,
     "verdict": "GENUINE"|"SUSPICIOUS"|"FAKE",
-    "verdict_reason": "string",
+    "verdict_reason": "string (max 20 words)",
     "rule_checks": [{"name": "string", "status": "pass"|"fail"|"neutral", "finding": "string"}],
-    "ai_reasoning": "string",
+    "ai_reasoning": "string (max 20 words)",
     "red_flags": ["string"],
     "positive_signals": ["string"],
     "ctc_inflation": {
@@ -336,13 +329,13 @@ const SCHEMAS = {
   "resume_check": {
     "mode": "gap_analysis",
     "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
-    "gaps": [{"from_company": "string", "from_date": "YYYY-MM", "to_company": "string", "to_date": "YYYY-MM", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG"}],
+    "gaps": [{"from_company": "string", "to_company": "string", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG", "label": "string"}],
     "total_gap_months": number,
     "verdict": "CLEAN"|"GAPS_FOUND",
     "red_flags": ["string"]
   }
 }`,
- 
+
   epfo_crosscheck: `{
   "type": "employment",
   "mode": "epfo_crosscheck",
@@ -350,31 +343,31 @@ const SCHEMAS = {
   "only_in_resume": [{"company": "string", "flag": "string"}],
   "experience_summary": {"resume_total_years": number, "epfo_total_years": number, "inflation_years": number},
   "verdict": "MATCH"|"PARTIAL"|"MISMATCH",
-  "verdict_reason": "string",
+  "verdict_reason": "string (max 20 words)",
   "red_flags": ["string"]
 }`,
- 
+
   epfo_only: `{
   "type": "employment",
   "mode": "epfo_summary",
   "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "uan": "string|null"}],
   "total_verified_years": number,
   "verdict": "COMPLETE"|"GAPS_FOUND",
-  "verdict_reason": "string",
+  "verdict_reason": "string (max 20 words)",
   "red_flags": ["string"]
 }`,
- 
+
   resume_only: `{
   "type": "employment",
   "mode": "gap_analysis",
   "companies": [{"company": "string", "from": "YYYY-MM", "to": "YYYY-MM|Present", "role": "string"}],
-  "gaps": [{"from_company": "string", "from_date": "YYYY-MM", "to_company": "string", "to_date": "YYYY-MM", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG", "label": "string"}],
+  "gaps": [{"from_company": "string", "to_company": "string", "gap_months": number, "severity": "SHORT"|"MEDIUM"|"LONG", "label": "string"}],
   "total_gap_months": number,
   "verdict": "CLEAN"|"GAPS_FOUND",
-  "verdict_reason": "string",
+  "verdict_reason": "string (max 20 words)",
   "red_flags": ["string"]
 }`,
- 
+
   unknown_docs: `{
   "type": "unknown",
   "detected_content": "string",
@@ -383,27 +376,23 @@ const SCHEMAS = {
   "red_flags": ["string"]
 }`,
 };
- 
+
 // ── Shared prompt builder ─────────────────────────────────────────────────────
 function buildUnifiedPrompt(documents, claimedCTC, mode, userMessage) {
-  // FIX 1: Per-doc safe type detection
   for (const doc of documents) {
     try {
       if (!doc.detectedType || doc.detectedType === "unknown") {
         doc.detectedType = detectDocType(doc.text || "", doc.fileName || "");
       }
     } catch (e) {
-      console.error(`detectDocType failed for ${doc.fileName}:`, e);
       doc.detectedType = "unknown";
     }
   }
- 
-  // Determine analysis mode
+
   const analysisMode = mode === "moonlighting"
     ? "moonlighting"
     : determineAnalysisMode(documents);
- 
-  // FIX 5: Auto-extract CTC from docs if not provided by user
+
   let effectiveCTC = claimedCTC || null;
   if (!effectiveCTC) {
     for (const doc of documents) {
@@ -411,10 +400,9 @@ function buildUnifiedPrompt(documents, claimedCTC, mode, userMessage) {
       if (found) { effectiveCTC = found; break; }
     }
   }
- 
-  // Pre-compute validators with try/catch per validator
+
   let validatorCtx = "";
- 
+
   try {
     const offerDoc = documents.find(d => d.detectedType === "offer_letter");
     if (offerDoc) {
@@ -422,14 +410,14 @@ function buildUnifiedPrompt(documents, claimedCTC, mode, userMessage) {
       const gst   = validateGST(offerDoc.text || "");
       const isMNC = /accenture|opentext|cognizant|capgemini|oracle|infosys|wipro|tcs\b|ibm\b|deloitte/i.test(offerDoc.text || "");
       const year  = ((offerDoc.text || "").match(/\b(20[012]\d|19[89]\d)\b/) || [])[1];
-      validatorCtx += `OFFER PRE-COMPUTED (do NOT re-validate):
+      validatorCtx += `OFFER PRE-COMPUTED:
 CIN: ${cin.found ? `${cin.raw} → ${cin.verdict}` : "NOT FOUND"}
 GST: ${gst.found ? `${gst.raw} → ${gst.verdict}` : "NOT FOUND"}
 IS_MNC: ${isMNC} | YEAR: ${year || "unknown"}
-NOTE: Pre-2017 letters → GST absence is NORMAL. MNC → CIN absence is NORMAL. INVALID_CHECKSUM = FAKE.\n\n`;
+NOTE: Pre-2017 → GST absence normal. MNC → CIN absence normal.\n\n`;
     }
-  } catch (e) { console.error("Offer validator error:", e); }
- 
+  } catch (e) {}
+
   try {
     const salDoc = documents.find(d => d.detectedType === "salary_slip");
     if (salDoc) {
@@ -443,9 +431,8 @@ NOTE: Pre-2017 letters → GST absence is NORMAL. MNC → CIN absence is NORMAL.
       const pfOk       = pf && pfExp ? (pf === 1800 || Math.abs(pf - pfExp) <= Math.max(50, pfExp * 0.01)) : null;
       const netOk      = gross && deductions && net ? Math.abs(net - (gross - deductions)) <= Math.max(10, gross * 0.002) : null;
       validatorCtx += `SALARY PRE-COMPUTED:
-GST: ${gst.found ? `${gst.raw} → ${gst.verdict}` : "NOT FOUND"}
-Gross=\u20b9${gross||"?"}, Basic=\u20b9${basic||"?"}, PF=\u20b9${pf||"?"} (expected 12%=\u20b9${pfExp?.toFixed(0)||"?"}) \u2192 PF_VALID:${pfOk===null?"?":pfOk}
-Net math: ${netOk===null?"?":netOk?"VALID":"MISMATCH \u2014 possible tampering"}\n`;
+Gross=₹${gross||"?"}, Basic=₹${basic||"?"}, PF=₹${pf||"?"} (expected=₹${pfExp?.toFixed(0)||"?"}) PF_VALID:${pfOk===null?"?":pfOk}
+Net math: ${netOk===null?"?":netOk?"VALID":"MISMATCH—possible tampering"}\n`;
       if (effectiveCTC && gross) {
         const employerPF = basic ? Math.min(basic * 0.12, 1800) : 1800;
         const gratuity   = basic ? basic * 0.0481 : 0;
@@ -453,79 +440,95 @@ Net math: ${netOk===null?"?":netOk?"VALID":"MISMATCH \u2014 possible tampering"}
         const claimed    = effectiveCTC < 500 ? effectiveCTC * 100000 : effectiveCTC;
         const gap        = claimed - derivedAnn;
         const inflatePct = Math.round((gap / derivedAnn) * 1000) / 10;
-        validatorCtx += `CTC: Derived=\u20b9${(derivedAnn/100000).toFixed(2)}L, Claimed=\u20b9${(claimed/100000).toFixed(2)}L, Gap=${inflatePct>0?'+':''}${inflatePct}% \u2192 ${Math.abs(inflatePct)<=15?"NORMAL":inflatePct>30?"HIGHLY_INFLATED":"INFLATED"}\n`;
+        validatorCtx += `CTC: Derived=₹${(derivedAnn/100000).toFixed(2)}L, Claimed=₹${(claimed/100000).toFixed(2)}L, ${inflatePct>0?'+':''}${inflatePct}% → ${Math.abs(inflatePct)<=15?"NORMAL":inflatePct>30?"HIGHLY_INFLATED":"INFLATED"}\n`;
       }
     }
-  } catch (e) { console.error("Salary validator error:", e); }
- 
+  } catch (e) {}
+
   const jsonSchema = SCHEMAS[analysisMode] || SCHEMAS.unknown_docs;
- 
-  // FIX 4: Explicit no-echo instruction in system prompt
-  const systemPrompt = `You are ParamkaraCorp-HR, an expert Indian HR fraud detection AI.
+
+  // ── KEY FIX: Strict JSON-only, no story, concise strings ─────────────────
+  const systemPrompt = `You are ParamkaraCorp-HR, an Indian HR fraud detection AI.
 Analysis mode: ${analysisMode.toUpperCase()}
 ${validatorCtx}
-STRICT RULES:
-- Return ONLY valid JSON matching the schema below. Zero prose, zero markdown, zero preamble.
-- NEVER repeat, quote, or summarise text from the input documents. JSON output only.
-- Use pre-computed values exactly as given; do not re-derive them.
-- Be conservative: flag suspicious items as WARN not FAIL unless clearly fake.
-- Indian context: PF ceiling is \u20b91800/month (basic cap \u20b915000), GST introduced July 2017.
-- Score 0-100: 85+ = PASS, 60-84 = WARN, <60 = FAIL.
-- If a section has no supporting document (e.g. no EPFO doc for epfo_match), return empty array [].
- 
-REQUIRED JSON SCHEMA:
+STRICT OUTPUT RULES — NO EXCEPTIONS:
+1. Return ONLY valid JSON. Zero prose. Zero markdown. Zero explanation outside JSON.
+2. All string values: MAX 20 words. No paragraphs, no bullet points inside strings.
+3. "recommendation_reason", "verdict_reason", "ai_reasoning": 1 short sentence only.
+4. "strengths" and "gaps" arrays: each item max 6 words, max 4 items total.
+5. NEVER repeat document text. NEVER summarise the JD. NEVER explain your reasoning.
+6. Use pre-computed validator values exactly. Do not re-derive.
+7. Indian PF ceiling: ₹1800/month (basic cap ₹15000). GST introduced July 2017.
+8. Scores 0-100: 85+=PASS, 60-84=WARN, <60=FAIL.
+
+REQUIRED JSON SCHEMA (follow exactly):
 ${jsonSchema}`;
- 
-  // Build document sections safely
+
   const docSections = documents.map((d, i) => {
     try {
       const label = (d.detectedType || "UNKNOWN").toUpperCase().replace(/_/g, " ");
-      if (d.base64Image) return `DOCUMENT ${i+1} [${label}] (${d.fileName || "image"}): [IMAGE \u2014 analyze visually]`;
-      return `--- DOCUMENT ${i+1}: ${d.fileName || "unnamed"} [${label}] ---\n${(d.text || "").slice(0, 4000)}`;
+      if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE]`;
+      return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text || "").slice(0, 4000)}`;
     } catch (e) {
-      console.error(`Doc section build error for doc ${i}:`, e);
-      return `--- DOCUMENT ${i+1}: [error reading document] ---`;
+      return `--- DOC ${i+1}: [error] ---`;
     }
   }).join("\n\n");
- 
-  const userPrompt = `${docSections}${userMessage ? `\n\nAdditional HR context: ${userMessage}` : ""}`;
- 
+
+  const userPrompt = docSections;
+
   return { systemPrompt, userPrompt, analysisMode, effectiveCTC };
 }
- 
-// ── Conversational fallback — ONLY when no documents sent ────────────────────
+
+// ── Conversational fallback ───────────────────────────────────────────────────
 async function conversationalReply(userMessage, history) {
   const messages = [
     {
       role: "system",
-      content: `You are ParamkaraCorp-HR Assistant. You help Indian HR professionals verify:
-JD vs Resume matching, Offer letter fraud detection (CIN/GST), Salary slip authenticity (PF math, CTC inflation), Employment history (EPFO cross-check, gap analysis), and Moonlighting detection.
-Be concise and professional. Format in markdown.`,
+      content: `You are ParamkaraCorp-HR Assistant for Indian HR professionals.
+Help with: JD vs Resume matching, offer letter fraud, salary slip verification, employment history, moonlighting detection.
+Be concise — max 3 sentences per reply. Use markdown bullet points only if listing items.`,
     },
     ...history.slice(-4),
     { role: "user", content: userMessage },
   ];
-  const reply = await groq(messages, false, 400);
+  const reply = await groq(messages, false, 300);
   return { type: "conversation", reply };
 }
- 
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS")
     return { statusCode: 200, headers: CORS, body: "" };
- 
+
   if (event.httpMethod !== "POST")
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "Method not allowed" }) };
- 
+
   if (!GROQ_API_KEY)
     return { statusCode: 500, headers: { ...CORS, "Content-Type": "application/json" },
-             body: JSON.stringify({ error: "GROQ_API_KEY not configured in Netlify environment variables" }) };
- 
+             body: JSON.stringify({ error: "GROQ_API_KEY not configured" }) };
+
   try {
     const body = JSON.parse(event.body || "{}");
-    const { message, documents, history, claimedCTC, mode } = body;
- 
-    // FIX 2: Conversation only when genuinely no documents — no fall-through from doc routing
+    let { message, documents, history, claimedCTC, mode } = body;
+
+    // ── KEY FIX: If no documents but message looks like JD + history has resume ──
+    if ((!documents || documents.length === 0) && message && messageIsJD(message)) {
+      // Try to find resume text from history context
+      const resumeEntry = (history || []).slice().reverse().find(h =>
+        h._resumeText || (h.role === 'user' && h.content && h.content.length > 500 &&
+          /experience|education|skills/i.test(h.content))
+      );
+      if (resumeEntry) {
+        const resumeText = resumeEntry._resumeText || resumeEntry.content;
+        documents = [
+          { id: 'jd_msg', fileName: 'pasted_jd.txt', text: message, detectedType: 'jd' },
+          { id: 'resume_hist', fileName: resumeEntry._resumeFileName || 'resume.pdf', text: resumeText, detectedType: 'resume' },
+        ];
+        message = '';
+      }
+    }
+
+    // Pure conversation — no documents
     if (!documents || documents.length === 0) {
       const result = await conversationalReply(message || "Hello", history || []);
       return {
@@ -534,55 +537,47 @@ exports.handler = async (event) => {
         body: JSON.stringify(result),
       };
     }
- 
-    // FIX 1: Safe server-side type detection — per-doc try/catch
+
+    // Server-side type detection
     for (const doc of documents) {
       try {
         if (!doc.detectedType || doc.detectedType === "unknown") {
           doc.detectedType = detectDocType(doc.text || "", doc.fileName || "");
         }
       } catch (e) {
-        console.error(`Type detection failed for ${doc.fileName}:`, e);
         doc.detectedType = "unknown";
       }
     }
- 
-    // Build unified prompt
+
     let promptResult;
     try {
       promptResult = buildUnifiedPrompt(documents, claimedCTC, mode, message);
     } catch (e) {
-      console.error("buildUnifiedPrompt fatal error:", e.stack || e);
       return {
         statusCode: 500,
         headers: { ...CORS, "Content-Type": "application/json" },
         body: JSON.stringify({ error: `Prompt build failed: ${e.message}` }),
       };
     }
- 
+
     const { systemPrompt, userPrompt, analysisMode, effectiveCTC } = promptResult;
     const hasImage = documents.some(d => d.base64Image);
- 
+
     let result;
     if (hasImage) {
       const contentBlocks = [];
       for (const doc of documents) {
         try {
           if (doc.base64Image) {
-            contentBlocks.push({
-              type: "image_url",
-              image_url: { url: `data:${doc.imageMediaType};base64,${doc.base64Image}` },
-            });
+            contentBlocks.push({ type: "image_url", image_url: { url: `data:${doc.imageMediaType};base64,${doc.base64Image}` } });
             contentBlocks.push({ type: "text", text: `Above image: ${doc.fileName}` });
           } else if (doc.text) {
             contentBlocks.push({ type: "text", text: `--- ${doc.fileName} ---\n${doc.text.slice(0, 3000)}` });
           }
-        } catch (e) {
-          console.error(`Vision block error for ${doc.fileName}:`, e);
-        }
+        } catch (e) {}
       }
       contentBlocks.push({ type: "text", text: `\nReturn JSON only per schema:\n${systemPrompt.split("REQUIRED JSON SCHEMA:")[1] || ""}` });
- 
+
       const visionBody = {
         model: VISION_MODEL,
         messages: [
@@ -593,18 +588,17 @@ exports.handler = async (event) => {
         max_tokens: 2000,
         response_format: { type: "json_object" },
       };
- 
+
       const visionRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
         method: "POST",
         headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify(visionBody),
       });
- 
+
       if (!visionRes.ok) {
-        // Fallback to text model
         result = await groq([
           { role: "system", content: systemPrompt },
-          { role: "user", content: "[Image uploaded \u2014 analyze from context and file name]\n" + userPrompt },
+          { role: "user", content: "[Image uploaded]\n" + userPrompt },
         ], true, 2000);
       } else {
         const vd = await visionRes.json();
@@ -618,11 +612,10 @@ exports.handler = async (event) => {
         { role: "user",   content: userPrompt },
       ], true, 2500);
     }
- 
-    // Ensure type is set
+
     if (!result.type) result.type = analysisMode;
- 
-    // Attach server-computed CTC inflation (overrides AI guess)
+
+    // Attach server-computed CTC inflation
     if (effectiveCTC) {
       const salDoc = documents.find(d => d.detectedType === "salary_slip");
       if (salDoc) {
@@ -641,27 +634,23 @@ exports.handler = async (event) => {
               claimed_ctc_annual: claimed,
               inflation_gap:      Math.round(gap),
               inflation_percent:  inflatePct,
-              verdict:            Math.abs(inflatePct) <= 15 ? "NORMAL" : inflatePct > 30 ? "HIGHLY_INFLATED" : "INFLATED",
+              verdict: Math.abs(inflatePct) <= 15 ? "NORMAL" : inflatePct > 30 ? "HIGHLY_INFLATED" : "INFLATED",
             };
-            // Attach to correct nesting
             if (result.salary_check) result.salary_check.ctc_inflation = ctcObj;
             else if (result.type === "salary_slip" || result.type === "salary_resume") result.ctc_inflation = ctcObj;
           }
-        } catch (e) { console.error("CTC post-computation error:", e); }
+        } catch (e) {}
       }
     }
- 
-    // FIX 5: Tell client CTC was auto-extracted so it can skip the modal
-    if (effectiveCTC && !claimedCTC) {
-      result._ctc_auto_extracted = effectiveCTC;
-    }
- 
+
+    if (effectiveCTC && !claimedCTC) result._ctc_auto_extracted = effectiveCTC;
+
     return {
       statusCode: 200,
       headers: { ...CORS, "Content-Type": "application/json" },
       body: JSON.stringify(result),
     };
- 
+
   } catch (err) {
     console.error("Agent fatal error:", err.stack || err);
     return {
@@ -671,4 +660,3 @@ exports.handler = async (event) => {
     };
   }
 };
- 
