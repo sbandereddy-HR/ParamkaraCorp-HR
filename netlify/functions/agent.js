@@ -11,7 +11,7 @@ const CORS = {
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
-async function groq(messages, json = false, maxTokens = 4000) {
+async function groq(messages, json = false, maxTokens = 2500) {
   const body = { model: MODEL, messages, temperature: 0.05, max_tokens: maxTokens };
   if (json) body.response_format = { type: "json_object" };
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -28,6 +28,18 @@ async function groq(messages, json = false, maxTokens = 4000) {
     catch { throw new Error("JSON parse failed: " + content.slice(0, 300)); }
   }
   return content;
+}
+
+// Retry wrapper — handles Groq rate-limit / transient 500s
+async function groqWithRetry(messages, json = false, maxTokens = 2500) {
+  try {
+    return await groq(messages, json, maxTokens);
+  } catch (e) {
+    const shouldRetry = e.message.includes("429") || e.message.includes("500") || e.message.includes("503");
+    if (!shouldRetry) throw e;
+    await new Promise(r => setTimeout(r, 3000)); // wait 3s then retry once
+    return await groq(messages, json, maxTokens);
+  }
 }
 
 // ── Validators ────────────────────────────────────────────────────────────────
@@ -207,17 +219,26 @@ function routeMode(documents, modeHint) {
   const hasEPFO    = has("epfo");
   const hasBank    = has("bank");
 
+  // ── Sidebar mode hints — actually respected now ────────────────────────────
+  if (modeHint === "multi"   && numResumes >= 2) return "multi_rank";
+  if (modeHint === "multi"   && numResumes === 1) return "resume_only"; // only 1 resume, can't rank
+  if (modeHint === "jd"      && hasJD && numResumes >= 2) return "multi_rank";
+  if (modeHint === "jd"      && hasJD && numResumes >= 1) return "jd_resume";
+  if (modeHint === "jd"      && hasJD) return "jd_only";
+  if (modeHint === "ctc")    return "ctc_verification";
+  if (modeHint === "service" && hasEPFO && numResumes >= 1) return "epfo_crosscheck";
+  if (modeHint === "service" && hasEPFO) return "epfo_only";
+  if (modeHint === "offer"   && hasOffer && hasSalary) return "offer_salary";
+  if (modeHint === "offer"   && hasOffer) return "offer_letter";
+
+  // ── Auto-detect fallback ───────────────────────────────────────────────────
   if (hasJD && numResumes >= 2) return "multi_rank";
   if (hasJD && numResumes === 1) return "jd_resume";
   if (hasJD) return "jd_only";
   if (hasOffer && hasSalary) return "offer_salary";
   if (hasOffer) return "offer_letter";
-
-  // ── NEW: all CTC verification combos ──────────────────────────────────────
-  // Service history (EPFO) + resume → employment verification
   if (hasEPFO && numResumes >= 1) return "epfo_crosscheck";
 
-  // CTC inflation combos (salary/bank/pf in any combination)
   const ctcDocCount = [hasSalary, hasBank, hasEPFO].filter(Boolean).length;
   if (ctcDocCount >= 1) return "ctc_verification";
 
@@ -311,9 +332,9 @@ function buildPrompt(documents, claimedCTC, modeHint) {
   const docSections = documents.map((d, i) => {
     const label = (d.detectedType||"unknown").toUpperCase();
     if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE]`;
-    const limit = d.detectedType === "resume" ? 7000
-            : d.detectedType === "epfo"   ? 3000
-            : 4000;
+    const limit = d.detectedType === "resume" ? 4000
+            : d.detectedType === "epfo"   ? 2000
+            : 2500;
     return `--- DOC ${i+1}: ${d.fileName} [${label}] ---\n${(d.text||"").slice(0, limit)}`;
   }).join("\n\n");
 
@@ -703,8 +724,8 @@ exports.handler = async (event) => {
       }
     } else {
       const isMulti = analysisMode === "multi_rank";
-      const tokenLimit = isMulti ? 6000 : analysisMode === "ctc_verification" ? 5000 : 4000;
-      result = await groq([{ role: "system", content: system }, { role: "user", content: userPrompt }], true, tokenLimit);
+      const tokenLimit = isMulti ? 3500 : analysisMode === "ctc_verification" ? 3000 : 2500;
+      result = await groqWithRetry([{ role: "system", content: system }, { role: "user", content: userPrompt }], true, tokenLimit);
     }
 
     if (!result.type) result.type = analysisMode;
