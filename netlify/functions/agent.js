@@ -1,26 +1,43 @@
-// ParamkaraCorp-HR Agent — v5 (STRICT PIPELINE)
-// Architecture: UPLOAD → DETECT → VALIDATE → QUEUE → ANALYZE (ONCE) → AGGREGATE → OUTPUT
-// Single combined analysis call only. Resume-first enforced server-side.
+// ParamkaraCorp-HR Agent — v6 (FIXED)
+// Fixes: model tiering, retry-after parsing, token budgets, CORS, vision fallback, audit log
 
 const GROQ_API_KEY  = process.env.GROQ_API_KEY;
-const MODEL         = "llama-3.3-70b-versatile";
+
+// ── Model tiering: use light model for cheap tasks, heavy only when needed ───
+const MODEL_HEAVY   = "llama-3.3-70b-versatile";   // full_analysis, ctc_verification, multi_rank
+const MODEL_LIGHT   = "llama-3.1-8b-instant";       // chat, jd_only, resume_only, jd_resume
 const VISION_MODEL  = "meta-llama/llama-4-scout-17b-16e-instruct";
 
-// ── Doc priority order (lower index = higher priority) ───────────────────────
-const DOC_PRIORITY = ["resume", "jd", "salary", "epfo", "bank", "offer", "unknown"];
-// ── Token budget per doc type ────────────────────────────────────────────────
-const DOC_CHAR_LIMITS = { resume: 3000, jd: 1500, salary: 1500, epfo: 1500, bank: 1500, offer: 1500, unknown: 800 };
-const MAX_DOCS = 4;
+// Modes that need the heavy model
+const HEAVY_MODES = new Set(["full_analysis", "ctc_verification", "multi_rank", "offer_letter", "offer_salary", "epfo_crosscheck"]);
 
+// ── Doc priority order (lower index = higher priority) ───────────────────────
+const DOC_PRIORITY     = ["resume", "jd", "salary", "epfo", "bank", "offer", "unknown"];
+const DOC_CHAR_LIMITS  = { resume: 3000, jd: 1500, salary: 1500, epfo: 1500, bank: 1500, offer: 1500, unknown: 800 };
+const MAX_DOCS         = 4;
+const MAX_FILE_BYTES   = 5 * 1024 * 1024; // 5 MB server-side guard
+
+// ── CORS — restrict to your domain in production ─────────────────────────────
+// PROD: replace * with your actual origin e.g. "https://your-app.netlify.app"
+const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "*";
 const CORS = {
-  "Access-Control-Allow-Origin":  "*",
+  "Access-Control-Allow-Origin":  ALLOWED_ORIGIN,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
+// ── Audit logger ──────────────────────────────────────────────────────────────
+function auditLog(event, data = {}) {
+  console.log(JSON.stringify({
+    ts:        new Date().toISOString(),
+    event,
+    ...data,
+  }));
+}
+
 // ── Groq caller ────────────────────────────────────────────────────────────────
-async function groq(messages, json = false, maxTokens = 2500) {
-  const body = { model: MODEL, messages, temperature: 0.05, max_tokens: maxTokens };
+async function groq(messages, json = false, maxTokens = 2500, model = MODEL_HEAVY) {
+  const body = { model, messages, temperature: 0.05, max_tokens: maxTokens };
   if (json) body.response_format = { type: "json_object" };
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
@@ -41,13 +58,43 @@ async function groq(messages, json = false, maxTokens = 2500) {
   return content;
 }
 
-async function groqWithRetry(messages, json = false, maxTokens = 2500, retries = 2) {
+// ── Retry with correct retry-after parsing for 429 ────────────────────────────
+// FIX: old code retried at 2.5s/5s, but Groq says wait 7+ minutes for TPD 429s
+//      — those long-wait 429s are thrown immediately so the client shows a proper
+//        "wait X minutes" message instead of silently spinning and failing again.
+async function groqWithRetry(messages, json = false, maxTokens = 2500, model = MODEL_HEAVY, retries = 2) {
   for (let attempt = 0; attempt <= retries; attempt++) {
-    try { return await groq(messages, json, maxTokens); }
-    catch (e) {
-      const retryable = e.message.includes("429") || e.message.includes("503") || e.message.includes("500");
-      if (!retryable || attempt === retries) throw e;
-      await new Promise(r => setTimeout(r, 2500 * (attempt + 1)));
+    try {
+      return await groq(messages, json, maxTokens, model);
+    } catch (e) {
+      const is429 = e.message.includes("429");
+      const is5xx = e.message.includes("503") || e.message.includes("500");
+
+      if (!is429 && !is5xx) throw e;          // non-retryable error
+      if (attempt === retries) throw e;        // exhausted retries
+
+      if (is429) {
+        // Parse the exact wait time from Groq's error body
+        const minsMatch  = e.message.match(/try again in (\d+)m(\d+(?:\.\d+)?)s/);
+        const secsMatch  = e.message.match(/try again in (\d+(?:\.\d+)?)s/);
+        let waitMs = 3000 * (attempt + 1);  // default backoff
+
+        if (minsMatch) {
+          waitMs = (parseInt(minsMatch[1]) * 60 + parseFloat(minsMatch[2])) * 1000;
+        } else if (secsMatch) {
+          waitMs = parseFloat(secsMatch[1]) * 1000;
+        }
+
+        // If Groq says wait > 20 seconds, throw immediately with the original error
+        // — retrying in 2.5s is pointless; the client will show the wait time to the user
+        if (waitMs > 20000) throw e;
+
+        auditLog("groq_retry", { attempt, wait_ms: waitMs, model });
+        await new Promise(r => setTimeout(r, waitMs));
+      } else {
+        // 5xx — short exponential backoff
+        await new Promise(r => setTimeout(r, 2500 * (attempt + 1)));
+      }
     }
   }
 }
@@ -199,26 +246,20 @@ function detectType(text, fileName) {
 }
 
 // ── Pipeline: apply doc limits ─────────────────────────────────────────────────
-// Sort by priority, cap at MAX_DOCS, truncate text per type
 function applyDocLimits(documents) {
-  // Sort by priority
   const sorted = [...documents].sort((a, b) => {
     const pa = DOC_PRIORITY.indexOf(a.detectedType || 'unknown');
     const pb = DOC_PRIORITY.indexOf(b.detectedType || 'unknown');
     return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb);
   });
-
-  // Cap at MAX_DOCS — drop lowest-priority first (already sorted)
   const limited = sorted.slice(0, MAX_DOCS);
-
-  // Truncate each doc text
   return limited.map(doc => ({
     ...doc,
     text: doc.base64Image ? doc.text : (doc.text || '').slice(0, DOC_CHAR_LIMITS[doc.detectedType] || 800)
   }));
 }
 
-// ── Route to unified analysis mode ─────────────────────────────────────────────
+// ── Route to analysis mode ──────────────────────────────────────────────────────
 function routeMode(documents) {
   const types = documents.map(d => d.detectedType || "unknown");
   const has   = t => types.includes(t);
@@ -232,29 +273,17 @@ function routeMode(documents) {
   const hasBank    = has("bank");
   const hasCTC     = hasSalary || hasBank || hasEPFO;
 
-  // Unified full analysis: resume + jd + any financial docs → comprehensive
-  if (numResumes >= 1 && hasJD && hasCTC) return "full_analysis";
-  if (numResumes >= 1 && hasJD && hasOffer) return "full_analysis";
-
-  // EPFO cross-check
-  if (hasEPFO && numResumes >= 1) return "epfo_crosscheck";
-
-  // JD routing
-  if (hasJD && numResumes >= 2) return "multi_rank";
-  if (hasJD && numResumes === 1) return "jd_resume";
-  if (hasJD) return "jd_only";
-
-  // Offer letter
-  if (hasOffer && hasSalary) return "offer_salary";
-  if (hasOffer) return "offer_letter";
-
-  // CTC/financial docs (with resume in payload)
-  if (hasCTC && numResumes >= 1) return "ctc_verification";
-
-  // Resume-only
-  if (numResumes >= 2) return "multi_resume_nojd";
-  if (numResumes >= 1) return "resume_only";
-
+  if (numResumes >= 1 && hasJD && hasCTC)    return "full_analysis";
+  if (numResumes >= 1 && hasJD && hasOffer)  return "full_analysis";
+  if (hasEPFO && numResumes >= 1)            return "epfo_crosscheck";
+  if (hasJD && numResumes >= 2)              return "multi_rank";
+  if (hasJD && numResumes === 1)             return "jd_resume";
+  if (hasJD)                                 return "jd_only";
+  if (hasOffer && hasSalary)                 return "offer_salary";
+  if (hasOffer)                              return "offer_letter";
+  if (hasCTC && numResumes >= 1)             return "ctc_verification";
+  if (numResumes >= 2)                       return "multi_resume_nojd";
+  if (numResumes >= 1)                       return "resume_only";
   return "unknown_docs";
 }
 
@@ -338,7 +367,6 @@ function buildPrompt(documents, claimedCTC) {
     }
   }
 
-  // Build doc sections with per-type char limits applied
   const docSections = documents.map((d, i) => {
     const label = (d.detectedType||"unknown").toUpperCase();
     if (d.base64Image) return `DOC ${i+1} [${label}] (${d.fileName}): [IMAGE — processed by vision model]`;
@@ -422,7 +450,6 @@ ${schema}`;
 // ── Schemas ────────────────────────────────────────────────────────────────────
 const SCHEMAS = {
 
-  // NEW: Unified full analysis schema
   full_analysis: `{
   "type": "full_analysis",
   "candidate": {"name": "string|null", "total_experience_years": number, "current_role": "string|null"},
@@ -625,14 +652,14 @@ const SCHEMAS = {
 }`,
 };
 
-// ── Conversational fallback ──────────────────────────────────────────────────────
+// ── Conversational fallback — uses light model ────────────────────────────────
 async function chat(message, history) {
   const msgs = [
     { role: "system", content: `You are ParamkaraCorp-HR Assistant for Indian HR professionals. Help with: resume screening, JD matching, offer letter fraud, salary verification, EPFO checks. Be concise — max 3 sentences.` },
     ...(history||[]).slice(-4),
     { role: "user", content: message },
   ];
-  return { type: "conversation", reply: await groq(msgs, false, 300) };
+  return { type: "conversation", reply: await groqWithRetry(msgs, false, 300, MODEL_LIGHT) };
 }
 
 // ── Main handler ────────────────────────────────────────────────────────────────
@@ -640,6 +667,8 @@ exports.handler = async (event) => {
   if (event.httpMethod === "OPTIONS") return { statusCode: 200, headers: CORS, body: "" };
   if (event.httpMethod !== "POST")    return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: "Method not allowed" }) };
   if (!GROQ_API_KEY)                  return { statusCode: 500, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify({ error: "GROQ_API_KEY not set" }) };
+
+  const requestId = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
 
   try {
     const body = JSON.parse(event.body || "{}");
@@ -649,6 +678,16 @@ exports.handler = async (event) => {
     if (!documents || documents.length === 0) {
       const r = await chat(message || "Hello", history);
       return { statusCode: 200, headers: { ...CORS, "Content-Type": "application/json" }, body: JSON.stringify(r) };
+    }
+
+    // ── File size guard (server-side) ──────────────────────────────────────────
+    for (const doc of documents) {
+      const textBytes = (doc.text||"").length + (doc.base64Image||"").length;
+      if (textBytes > MAX_FILE_BYTES) {
+        doc.text = (doc.text||"").slice(0, DOC_CHAR_LIMITS[doc.detectedType] || 800);
+        doc.base64Image = undefined; // drop oversized images silently
+        auditLog("file_truncated", { requestId, fileName: doc.fileName });
+      }
     }
 
     // ── Server-side type detection ─────────────────────────────────────────────
@@ -686,15 +725,37 @@ exports.handler = async (event) => {
       };
     }
 
-    // ── PIPELINE: Apply doc limits (priority sort + MAX_DOCS cap + truncation) ─
-    const limitedDocs = applyDocLimits(documents);
+    // ── PIPELINE: Apply doc limits ─────────────────────────────────────────────
+    const limitedDocs  = applyDocLimits(documents);
     const droppedCount = documents.length - limitedDocs.length;
 
-    // ── Build prompt & call LLM ────────────────────────────────────────────────
+    // ── Build prompt ───────────────────────────────────────────────────────────
     const { system, userPrompt, analysisMode, effectiveCTC } = buildPrompt(limitedDocs, claimedCTC);
     const hasImage = limitedDocs.some(d => d.base64Image);
 
+    // ── FIX: select model and token budget based on analysis mode ─────────────
+    const model = HEAVY_MODES.has(analysisMode) ? MODEL_HEAVY : MODEL_LIGHT;
+    const tokenLimit =
+      analysisMode === "full_analysis"      ? 4500 :  // was 3500 — FIX for json_validate_failed
+      analysisMode === "multi_rank"         ? 3500 :
+      analysisMode === "ctc_verification"   ? 3500 :
+      analysisMode === "epfo_crosscheck"    ? 3000 :
+      analysisMode === "offer_salary"       ? 3000 :
+      analysisMode === "offer_letter"       ? 2500 :
+      analysisMode === "jd_resume"          ? 3000 :
+                                              2500;
+
+    auditLog("analysis_start", {
+      requestId,
+      analysisMode,
+      model,
+      tokenLimit,
+      docCount: limitedDocs.length,
+      docTypes: limitedDocs.map(d => d.detectedType),
+    });
+
     let result;
+    let visionFallback = false;
 
     if (hasImage) {
       const blocks = [];
@@ -714,16 +775,18 @@ exports.handler = async (event) => {
         body: JSON.stringify({
           model: VISION_MODEL,
           messages: [{ role: "system", content: system }, { role: "user", content: blocks }],
-          temperature: 0.05, max_tokens: 3000,
+          temperature: 0.05, max_tokens: tokenLimit,
           response_format: { type: "json_object" }
         }),
       });
       if (!vRes.ok) {
-        // Fall back to text model with image placeholder
+        // FIX: log the vision fallback so client knows image wasn't processed
+        visionFallback = true;
+        auditLog("vision_fallback", { requestId, reason: `vision HTTP ${vRes.status}` });
         result = await groqWithRetry([
           { role: "system", content: system },
           { role: "user", content: "[IMAGE — analyze based on filename and other docs]\n" + userPrompt }
-        ], true, 3000);
+        ], true, tokenLimit, model);
       } else {
         const vd = await vRes.json();
         const ct = vd.choices?.[0]?.message?.content ?? "{}";
@@ -731,18 +794,15 @@ exports.handler = async (event) => {
         result = m ? JSON.parse(m[0]) : JSON.parse(ct);
       }
     } else {
-      const isMulti   = analysisMode === "multi_rank";
-      const isFull    = analysisMode === "full_analysis";
-      const tokenLimit = isMulti ? 3500 : isFull ? 3500 : analysisMode === "ctc_verification" ? 3000 : 2500;
       result = await groqWithRetry(
         [{ role: "system", content: system }, { role: "user", content: userPrompt }],
-        true, tokenLimit
+        true, tokenLimit, model
       );
     }
 
     if (!result.type) result.type = analysisMode;
 
-    // ── Attach server-computed CTC inflation for salary docs ───────────────────
+    // ── Attach server-computed CTC inflation ───────────────────────────────────
     if (effectiveCTC) {
       const salDoc = limitedDocs.find(d => d.detectedType === "salary");
       if (salDoc) {
@@ -765,12 +825,17 @@ exports.handler = async (event) => {
       }
     }
 
-    // ── Attach metadata ────────────────────────────────────────────────────────
+    // ── Metadata ───────────────────────────────────────────────────────────────
     result._meta = {
-      docs_analyzed: limitedDocs.length,
-      docs_dropped: droppedCount,
-      analysis_mode: analysisMode,
+      request_id:      requestId,
+      docs_analyzed:   limitedDocs.length,
+      docs_dropped:    droppedCount,
+      analysis_mode:   analysisMode,
+      model_used:      model,
+      vision_fallback: visionFallback,
     };
+
+    auditLog("analysis_done", { requestId, analysisMode, type: result.type });
 
     return {
       statusCode: 200,
@@ -779,6 +844,7 @@ exports.handler = async (event) => {
     };
 
   } catch (err) {
+    auditLog("analysis_error", { requestId, error: err.message?.slice(0, 300) });
     console.error("Fatal:", err.stack || err);
     return {
       statusCode: 500,
