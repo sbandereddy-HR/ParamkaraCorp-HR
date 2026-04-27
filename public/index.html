@@ -38,6 +38,9 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .tb-dot.error{background:var(--red);animation:none}
 .tb-new{padding:5px 12px;background:var(--bg3);border:1px solid var(--border2);border-radius:6px;font-size:.72rem;color:var(--muted2);cursor:pointer;font-family:var(--font-body);transition:all .15s}
 .tb-new:hover{background:var(--bg3);color:var(--text);border-color:var(--green)}
+.tb-export{padding:5px 12px;background:var(--green-dim);border:1px solid rgba(13,115,119,0.3);border-radius:6px;font-size:.72rem;color:var(--green);cursor:pointer;font-family:var(--font-body);transition:all .15s;display:none}
+.tb-export.show{display:block}
+.tb-export:hover{background:var(--green);color:#fff}
 
 /* ── Pipeline progress bar ── */
 #pipeline-bar{display:none;padding:8px 20px;background:#ffffff;border-bottom:1px solid var(--border);flex-shrink:0}
@@ -90,6 +93,15 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .td{width:5px;height:5px;border-radius:50%;background:var(--muted2);animation:td 1.2s infinite}
 .td:nth-child(2){animation-delay:.2s}.td:nth-child(3){animation-delay:.4s}
 @keyframes td{0%,60%,100%{transform:translateY(0);opacity:.4}30%{transform:translateY(-5px);opacity:1}}
+
+/* ── Analysis progress indicator ── */
+.analysis-progress{display:flex;flex-direction:column;gap:6px;padding:4px 0}
+.ap-step{display:flex;align-items:center;gap:8px;font-size:.75rem;color:var(--muted2);transition:color .3s}
+.ap-step.active{color:var(--amber);font-weight:600}
+.ap-step.done{color:var(--green)}
+.ap-dot{width:7px;height:7px;border-radius:50%;background:var(--bg4);flex-shrink:0;transition:background .3s}
+.ap-step.active .ap-dot{background:var(--amber);animation:pulse .8s infinite}
+.ap-step.done .ap-dot{background:var(--green);animation:none}
 
 /* ── File chips ── */
 #files-row{display:flex;gap:6px;flex-wrap:wrap;padding:0 18px;flex-shrink:0}
@@ -158,6 +170,11 @@ code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-family:var(--f
 .ib-btn{width:32px;height:32px;border-radius:7px;background:var(--bg3);border:1px solid var(--border);color:var(--muted2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .ib-btn:hover{background:var(--bg4);color:var(--text);border-color:rgba(13,115,119,0.4)}
 .ib-btn:disabled{opacity:.3;cursor:not-allowed}
+/* Analyze button pinned in input bar */
+#analyze-pin{height:32px;padding:0 12px;border-radius:7px;background:var(--green);border:none;color:#fff;cursor:pointer;display:none;align-items:center;gap:5px;font-size:.72rem;font-weight:700;font-family:var(--font-body);white-space:nowrap;transition:all .15s;flex-shrink:0}
+#analyze-pin.show{display:flex}
+#analyze-pin:hover{background:#0a9499;box-shadow:0 0 10px rgba(13,115,119,0.35)}
+#analyze-pin:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
 .send-btn{width:32px;height:32px;border-radius:7px;background:var(--green);border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
 .send-btn:hover{background:#0a9499;box-shadow:0 0 10px rgba(13,115,119,0.35)}
 .send-btn:disabled{opacity:.3;cursor:not-allowed;box-shadow:none}
@@ -173,6 +190,9 @@ input[type=file]{display:none}
 
 /* ── Resume gate ── */
 #resume-gate{display:none;padding:16px 18px;border-top:1px solid var(--border2);background:#ffffff;flex-shrink:0}
+
+/* ── Vision fallback notice ── */
+.vision-fallback-notice{padding:6px 10px;background:rgba(196,124,0,0.08);border:1px solid rgba(196,124,0,0.2);border-radius:7px;font-size:.7rem;color:var(--amber);margin-top:6px}
 
 /* ══ RESULT CARDS ══════════════════════════════════════════════════ */
 .result-section{margin-top:4px}
@@ -251,7 +271,6 @@ input[type=file]{display:none}
 .sg-r-head{background:rgba(255,71,87,0.06);color:var(--red);border-bottom:1px solid rgba(255,71,87,0.1)}
 .sg-body{padding:9px 11px;background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 8px 8px;display:flex;flex-direction:column;gap:5px}
 .sg-item{font-size:.74rem;color:var(--muted2);display:flex;gap:5px;align-items:flex-start;line-height:1.4}
-/* ── Full analysis unified card ── */
 .final-decision{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--r);margin-bottom:8px;border:2px solid}
 .fd-hire{background:rgba(13,115,119,0.07);border-color:rgba(13,115,119,0.4)}
 .fd-maybe{background:rgba(196,124,0,0.07);border-color:rgba(196,124,0,0.4)}
@@ -264,6 +283,8 @@ input[type=file]{display:none}
 .fraud-low{background:var(--green-dim);color:var(--green)}
 .fraud-medium{background:var(--amber-dim);color:var(--amber)}
 .fraud-high{background:var(--red-dim);color:var(--red)}
+/* Meta footer */
+.result-meta{margin-top:8px;padding:7px 12px;background:var(--bg3);border-radius:7px;font-size:.66rem;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -274,6 +295,7 @@ input[type=file]{display:none}
   <div class="tb-spacer"></div>
   <div class="tb-status"><div class="tb-dot" id="status-dot"></div><span id="tb-status">Ready</span></div>
   <div class="tb-sep"></div>
+  <button class="tb-export" id="export-btn" onclick="exportReport()">⬇ Export Report</button>
   <button class="tb-new" onclick="newSession()">+ New Session</button>
 </div>
 
@@ -327,7 +349,7 @@ input[type=file]{display:none}
       <div class="wl-step">
         <div class="wl-step-num">STEP 4 — FINAL</div>
         <div class="wl-step-title">⚡ Click Analyze</div>
-        <div class="wl-step-desc">One combined analysis call. One final decision: HIRE / MAYBE / REJECT.</div>
+        <div class="wl-step-desc">One combined analysis call. One final decision: HIRE / MAYBE / REJECT. (Ctrl+Enter)</div>
       </div>
     </div>
   </div>
@@ -343,7 +365,7 @@ input[type=file]{display:none}
   <!-- File chips -->
   <div id="files-row"></div>
 
-  <!-- Stage banner (context-sensitive, single unified panel) -->
+  <!-- Stage banner -->
   <div id="stage-banner">
     <span class="sb-icon" id="sb-icon">💡</span>
     <div class="sb-info">
@@ -366,6 +388,11 @@ input[type=file]{display:none}
       <textarea id="txt" placeholder="Paste a Job Description, or ask anything…" rows="1"
         onkeydown="onKey(event)" oninput="autoResize(this)"></textarea>
       <div class="ib-actions">
+        <!-- Pinned Analyze button — shown when docs are queued -->
+        <button id="analyze-pin" onclick="runAnalysis()" title="Analyze all docs (Ctrl+Enter)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h9l-1 8 10-12h-9z"/></svg>
+          Analyze
+        </button>
         <button class="ib-btn" id="upload-btn" onclick="triggerUpload()" title="Upload files">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" stroke-linecap="round"/></svg>
         </button>
@@ -383,7 +410,7 @@ input[type=file]{display:none}
       <div style="width:44px;height:44px;border-radius:10px;background:var(--green-dim);border:1px solid rgba(13,115,119,0.25);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">📄</div>
       <div>
         <div style="font-family:var(--font-head);font-size:.88rem;font-weight:700;color:var(--text);margin-bottom:3px">Upload Candidate Resume to Begin</div>
-        <div style="font-size:.73rem;color:var(--muted2)">PDF · DOCX · JPG · PNG — resume is required before any other document</div>
+        <div style="font-size:.73rem;color:var(--muted2)">PDF · DOCX · JPG · PNG — resume is required before any other document (max 5MB)</div>
       </div>
       <div style="margin-left:auto">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -400,7 +427,7 @@ input[type=file]{display:none}
   <div class="drop-box">
     <div style="font-size:2.5rem;margin-bottom:12px">📄</div>
     <h3>Drop documents here</h3>
-    <p style="margin-top:6px">PDF, DOCX, JPG, PNG — type auto-detected</p>
+    <p style="margin-top:6px">PDF, DOCX, JPG, PNG — max 5MB each</p>
   </div>
 </div>
 
@@ -411,76 +438,93 @@ if (typeof pdfjsLib !== 'undefined')
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  PIPELINE STATES
-//  IDLE → RESUME_NEEDED → UPLOADING → QUEUED → CTC_NEEDED → READY → ANALYZING → DONE → ERROR
 // ══════════════════════════════════════════════════════════════════════════════
 const STATES = {
-  IDLE:          'IDLE',
-  RESUME_NEEDED: 'RESUME_NEEDED',
-  UPLOADING:     'UPLOADING',
-  QUEUED:        'QUEUED',
-  CTC_NEEDED:    'CTC_NEEDED',
-  READY:         'READY',
-  ANALYZING:     'ANALYZING',
-  DONE:          'DONE',
-  ERROR:         'ERROR',
+  IDLE: 'IDLE', RESUME_NEEDED: 'RESUME_NEEDED', UPLOADING: 'UPLOADING',
+  QUEUED: 'QUEUED', CTC_NEEDED: 'CTC_NEEDED', READY: 'READY',
+  ANALYZING: 'ANALYZING', DONE: 'DONE', ERROR: 'ERROR',
 };
 
-const DOC_PRIORITY = ['resume','jd','salary','epfo','bank','offer','unknown'];
+const DOC_PRIORITY    = ['resume','jd','salary','epfo','bank','offer','unknown'];
 const DOC_CHAR_LIMITS = {resume:3000,jd:1500,salary:1500,epfo:1500,bank:1500,offer:1500,unknown:800};
-const MAX_DOCS = 4;
-const SESSION_KEY = 'pcorp_session_v5';
+const MAX_DOCS        = 4;
+const MAX_FILE_BYTES  = 5 * 1024 * 1024; // 5MB
+const SESSION_KEY     = 'pcorp_session_v6';
 
 // ── Session state ──────────────────────────────────────────────────────────────
-let state = STATES.IDLE;
-let session = {
-  started: false,
-  resumeUploaded: false,
-  resumeDoc: null,          // { id, text, fileName, hash }
-  history: [],
-  claimedCTC: null,
-  lastResult: null,
-};
-let queue = [];             // docs staged for analysis (excluding resume which is in session)
-let readingCount = 0;       // files currently being extracted
-let lastError = null;       // { message, retryFn }
+let state   = STATES.IDLE;
+let session = { started:false, resumeUploaded:false, resumeDoc:null, history:[], claimedCTC:null, lastResult:null };
+let queue   = [];
+let readingCount = 0;
+let lastError    = null;
+let analysisProgressTimer = null;
 
-// ── Restore session from localStorage ─────────────────────────────────────────
+// ── Restore session ────────────────────────────────────────────────────────────
 try {
   const saved = localStorage.getItem(SESSION_KEY);
   if (saved) {
     const parsed = JSON.parse(saved);
-    if (parsed.resumeDoc) {
-      session = { ...session, ...parsed };
-      // Queue is NOT persisted (too heavy), only resume + ctc
-    }
+    if (parsed.resumeDoc) session = { ...session, ...parsed };
   }
-} catch(e) { /* ignore */ }
+} catch(e) {}
 
 function persistSession() {
   try {
-    const toSave = {
-      started: session.started,
-      resumeUploaded: session.resumeUploaded,
-      resumeDoc: session.resumeDoc,
-      history: session.history.slice(-10),
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      started: session.started, resumeUploaded: session.resumeUploaded,
+      resumeDoc: session.resumeDoc, history: session.history.slice(-10),
       claimedCTC: session.claimedCTC,
-    };
-    localStorage.setItem(SESSION_KEY, JSON.stringify(toSave));
-  } catch(e) { /* ignore quota errors */ }
+    }));
+  } catch(e) {}
 }
 
-// ── Content hash for deduplication ────────────────────────────────────────────
+// ── Content hash for dedup ─────────────────────────────────────────────────────
 function simpleHash(str) {
   let h = 0;
   for (let i = 0; i < Math.min(str.length, 500); i++) {
-    h = ((h << 5) - h) + str.charCodeAt(i);
-    h |= 0;
+    h = ((h << 5) - h) + str.charCodeAt(i); h |= 0;
   }
   return h.toString(36);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  STATE MACHINE — single transition function
+//  ERROR HUMANIZER — FIX: no more raw JSON dumps shown to the user
+// ══════════════════════════════════════════════════════════════════════════════
+function humanizeError(errMsg) {
+  if (!errMsg) return 'Unknown error occurred.';
+
+  // 429 — rate limit with parseable wait time
+  if (errMsg.includes('429')) {
+    const minsMatch = errMsg.match(/try again in (\d+)m(\d+(?:\.\d+)?)s/);
+    const secsMatch = errMsg.match(/try again in (\d+(?:\.\d+)?)s/);
+    let waitStr = 'a few minutes';
+    if (minsMatch) {
+      const m = parseInt(minsMatch[1]), s = Math.ceil(parseFloat(minsMatch[2]));
+      waitStr = m > 0 ? `${m}m ${s}s` : `${s}s`;
+    } else if (secsMatch) {
+      waitStr = `${Math.ceil(parseFloat(secsMatch[1]))}s`;
+    }
+    return `⏳ Rate limit hit — Groq daily quota needs ${waitStr} to reset. No data lost — click Retry after waiting.`;
+  }
+
+  // JSON generation cut off — too many tokens
+  if (errMsg.includes('json_validate_failed') || errMsg.includes('max completion tokens')) {
+    return '📄 Analysis was too large to complete in one pass. Try removing one document (e.g. the JD or bank statement) and click Retry.';
+  }
+
+  // Server / infra errors
+  if (errMsg.includes('503') || errMsg.includes('502')) return '🔌 Groq is temporarily unavailable. Click Retry in a few seconds.';
+  if (errMsg.includes('500')) return '⚙️ Internal server error. Click Retry — if it persists, try New Session.';
+  if (errMsg.includes('400')) return '❌ Bad request — check your documents and try again.';
+  if (errMsg.includes('RESUME_REQUIRED')) return '📄 Resume validation failed on server. Re-upload the resume and try again.';
+
+  // Truncate long raw errors (e.g. unparsed JSON)
+  const stripped = errMsg.replace(/\{[\s\S]{0,500}\}/g, '[details omitted]');
+  return stripped.length > 180 ? stripped.slice(0, 180) + '…' : stripped;
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  STATE MACHINE
 // ══════════════════════════════════════════════════════════════════════════════
 function transition(newState, data = {}) {
   const prev = state;
@@ -490,7 +534,6 @@ function transition(newState, data = {}) {
 }
 
 function renderPipelineState() {
-  // ── Pipeline bar steps ────────────────────────────────────────────────────
   const steps = {
     'ps-upload':   [STATES.UPLOADING, STATES.RESUME_NEEDED],
     'ps-detect':   [STATES.UPLOADING],
@@ -510,41 +553,39 @@ function renderPipelineState() {
   for (const [id, activeStates] of Object.entries(steps)) {
     const el = document.getElementById(id);
     if (!el) continue;
-    const done = (doneStates[id] || []).includes(state);
+    const done   = (doneStates[id] || []).includes(state);
     const active = activeStates.includes(state);
     el.className = 'pb-step ' + (done ? 'done' : active ? 'active' : 'blocked');
   }
 
-  // ── Status dot ───────────────────────────────────────────────────────────
+  // Status dot
   const dot = document.getElementById('status-dot');
-  if (state === STATES.ANALYZING || state === STATES.UPLOADING) {
-    dot.className = 'tb-dot busy';
-  } else if (state === STATES.ERROR) {
-    dot.className = 'tb-dot error';
-  } else {
-    dot.className = 'tb-dot';
-  }
+  if (state === STATES.ANALYZING || state === STATES.UPLOADING) dot.className = 'tb-dot busy';
+  else if (state === STATES.ERROR) dot.className = 'tb-dot error';
+  else dot.className = 'tb-dot';
 
-  // ── Stage banner ─────────────────────────────────────────────────────────
-  const ctcSection = document.getElementById('ctc-section');
-  const docLimitWarn = document.getElementById('doc-limit-warn');
-
-  // Hide CTC by default
-  ctcSection.classList.remove('show');
+  // CTC section
+  document.getElementById('ctc-section').classList.remove('show');
 
   // Doc limit warning
-  const overLimit = queue.length + 1 > MAX_DOCS; // +1 for resume
+  const overLimit = queue.length + 1 > MAX_DOCS;
   if (overLimit) {
-    const willDrop = prioritizeQueue().dropped;
-    if (willDrop.length > 0) {
-      docLimitWarn.classList.add('show');
-      docLimitWarn.textContent = `⚠ Doc limit: max ${MAX_DOCS} docs. Will drop lowest-priority: ${willDrop.map(d=>d.fileName).join(', ')}`;
+    const { dropped } = prioritizeQueue();
+    if (dropped.length > 0) {
+      document.getElementById('doc-limit-warn').classList.add('show');
+      document.getElementById('doc-limit-warn').textContent = `⚠ Doc limit: max ${MAX_DOCS} docs. Will drop lowest-priority: ${dropped.map(d=>d.fileName).join(', ')}`;
     } else {
-      docLimitWarn.classList.remove('show');
+      document.getElementById('doc-limit-warn').classList.remove('show');
     }
   } else {
-    docLimitWarn.classList.remove('show');
+    document.getElementById('doc-limit-warn').classList.remove('show');
   }
+
+  // Analyze pin button — show when docs are ready
+  const analyzePin = document.getElementById('analyze-pin');
+  const showAnalyzePin = (state === STATES.QUEUED || state === STATES.READY) && queue.length > 0;
+  if (showAnalyzePin) analyzePin.classList.add('show');
+  else               analyzePin.classList.remove('show');
 
   switch (state) {
 
@@ -555,7 +596,7 @@ function renderPipelineState() {
       break;
 
     case STATES.UPLOADING:
-      showStageBanner('stage-upload', '⏳', `<strong>Reading ${readingCount} file(s)…</strong>`, 'Extracting text from documents', [], 'sb-btn-ghost');
+      showStageBanner('stage-upload', '⏳', `<strong>Reading ${readingCount} file(s)…</strong>`, 'Extracting text from documents', []);
       setStatus('Reading files…');
       break;
 
@@ -572,68 +613,92 @@ function renderPipelineState() {
         `<strong>${queue.length} doc${queue.length!==1?'s':''} queued</strong> + resume — ready to analyze`,
         docNames, actions);
       setStatus(`${queue.length + 1} doc${queue.length>0?'s':''} ready`);
-      // Persist upload state in session bar
-      document.getElementById('ps-queue').innerHTML =
-        `④ Queue <span class="pb-doc-count">${queue.length+1}</span>`;
+      document.getElementById('ps-queue').innerHTML = `④ Queue <span class="pb-doc-count">${queue.length+1}</span>`;
       break;
     }
 
     case STATES.CTC_NEEDED:
-      ctcSection.classList.add('show');
+      document.getElementById('ctc-section').classList.add('show');
       document.getElementById('ctc-input').focus();
-      showStageBanner('stage-ctc', '💰',
-        '<strong>CTC required</strong> before analysis',
-        'Salary/PF/bank docs detected — enter candidate\'s claimed CTC (LPA)', []);
+      showStageBanner('stage-ctc', '💰', '<strong>CTC required</strong> before analysis',
+        "Salary/PF/bank docs detected — enter candidate's claimed CTC (LPA)", []);
       setStatus('Enter CTC to continue');
       break;
 
     case STATES.READY: {
-      const actions = [
-        { label: `⚡ Analyze Now`, cls: 'sb-btn-primary', fn: 'runAnalysis()' }
-      ];
       const ctcTxt = session.claimedCTC ? ` · CTC: ₹${(session.claimedCTC/100000).toFixed(1)}L` : '';
-      showStageBanner('stage-upload', '✅',
-        `<strong>All checks passed</strong> — ready for analysis`,
-        `${queue.length + 1} docs queued${ctcTxt}`, actions);
+      showStageBanner('stage-upload', '✅', `<strong>All checks passed</strong> — ready for analysis`,
+        `${queue.length + 1} docs queued${ctcTxt}`,
+        [{ label: `⚡ Analyze Now`, cls: 'sb-btn-primary', fn: 'runAnalysis()' }]);
       setStatus('Ready to analyze');
       break;
     }
 
     case STATES.ANALYZING:
-      showStageBanner('stage-analyzing', '🔬',
-        '<strong>Analyzing…</strong> Do not close this tab',
-        'Single combined analysis in progress', []);
+      // Start progress steps cycling
+      startAnalysisProgress();
       setStatus('Analyzing…');
-      // Disable analyze button during analysis
       document.getElementById('upload-btn') && (document.getElementById('upload-btn').disabled = true);
-      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = true);
+      document.getElementById('send-btn')   && (document.getElementById('send-btn').disabled = true);
+      document.getElementById('analyze-pin').disabled = true;
       break;
 
     case STATES.DONE:
+      stopAnalysisProgress();
       hideStageBanner();
       setStatus('Analysis complete');
-      // Re-enable upload for additional analysis
       document.getElementById('upload-btn') && (document.getElementById('upload-btn').disabled = false);
-      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
+      document.getElementById('send-btn')   && (document.getElementById('send-btn').disabled = false);
+      document.getElementById('analyze-pin').disabled = false;
+      // Show export button
+      if (session.lastResult) document.getElementById('export-btn').classList.add('show');
       break;
 
-    case STATES.ERROR:
-      const errMsg = lastError?.message || 'Unknown error';
+    case STATES.ERROR: {
+      stopAnalysisProgress();
+      const rawMsg  = lastError?.message || 'Unknown error';
+      const niceMsg = humanizeError(rawMsg);  // FIX: show clean message
       const actions2 = lastError?.retryFn ? [
         { label: '↺ Retry', cls: 'sb-btn-danger', fn: '__retryError()' }
       ] : [];
-      showStageBanner('stage-error', '🚨',
-        `<strong>Error</strong> — ${escapeHtml(errMsg)}`,
-        'Session preserved. Click Retry to try again.', actions2);
+      showStageBanner('stage-error', '🚨', `<strong>Error</strong>`, niceMsg, actions2);
       setStatus('Error — see below');
       document.getElementById('upload-btn') && (document.getElementById('upload-btn').disabled = false);
-      document.getElementById('send-btn') && (document.getElementById('send-btn').disabled = false);
+      document.getElementById('send-btn')   && (document.getElementById('send-btn').disabled = false);
+      document.getElementById('analyze-pin').disabled = false;
       break;
+    }
   }
 
-  // Pipeline bar visibility
   if (session.started)
     document.getElementById('pipeline-bar').classList.add('show');
+}
+
+// ── Analysis progress steps ────────────────────────────────────────────────────
+const PROGRESS_STEPS = [
+  'Sending documents to AI…',
+  'Extracting structured data…',
+  'Verifying employment timeline…',
+  'Cross-checking CTC figures…',
+  'Scoring skill match…',
+  'Aggregating fraud signals…',
+  'Generating final decision…',
+];
+
+function startAnalysisProgress() {
+  let i = 0;
+  showStageBanner('stage-analyzing', '🔬',
+    '<strong>Analyzing…</strong> Do not close this tab',
+    PROGRESS_STEPS[0], []);
+
+  analysisProgressTimer = setInterval(() => {
+    i = Math.min(i + 1, PROGRESS_STEPS.length - 1);
+    document.getElementById('sb-sub-text').textContent = PROGRESS_STEPS[i];
+  }, 3000);
+}
+
+function stopAnalysisProgress() {
+  if (analysisProgressTimer) { clearInterval(analysisProgressTimer); analysisProgressTimer = null; }
 }
 
 // ── Stage banner helpers ───────────────────────────────────────────────────────
@@ -643,7 +708,6 @@ function showStageBanner(cls, icon, mainText, subText, actions) {
   document.getElementById('sb-icon').textContent = icon;
   document.getElementById('sb-main-text').innerHTML = mainText;
   document.getElementById('sb-sub-text').innerHTML = subText;
-
   const actEl = document.getElementById('sb-actions');
   actEl.innerHTML = '';
   (actions || []).forEach(a => {
@@ -655,22 +719,21 @@ function showStageBanner(cls, icon, mainText, subText, actions) {
   });
 }
 
-function hideStageBanner() {
-  document.getElementById('stage-banner').className = '';
-}
+function hideStageBanner() { document.getElementById('stage-banner').className = ''; }
+function escapeHtml(s)     { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function setStatus(s)      { document.getElementById('tb-status').textContent = s; }
+function __retryError()    { if (lastError?.retryFn) lastError.retryFn(); }
 
-function escapeHtml(s) {
-  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function setStatus(s) {
-  document.getElementById('tb-status').textContent = s;
-}
-
-// ── Retry helper (global for onclick) ─────────────────────────────────────────
-function __retryError() {
-  if (lastError?.retryFn) lastError.retryFn();
-}
+// ── Keyboard shortcuts ─────────────────────────────────────────────────────────
+// FIX: Ctrl+Enter to trigger analysis when docs are ready
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'Enter') {
+    if (state === STATES.QUEUED || state === STATES.READY) {
+      e.preventDefault();
+      runAnalysis();
+    }
+  }
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 //  DOC TYPE DETECTOR
@@ -678,40 +741,27 @@ function __retryError() {
 function detectType(text, fileName) {
   const t = (text || '').toLowerCase();
   const f = (fileName || '').toLowerCase();
-
-  const isSalary =
-    t.includes('salary slip') || t.includes('payslip') || t.includes('pay slip') ||
+  const isSalary = t.includes('salary slip') || t.includes('payslip') || t.includes('pay slip') ||
     t.includes('gross earnings') || t.includes('gross salary') ||
     t.includes('net pay') || t.includes('net salary') || t.includes('take home pay') ||
-    (t.includes('month') && t.includes('basic') && t.includes('hra') &&
-     t.includes('net') && (t.includes('₹') || t.includes('inr') || t.includes('rs.')));
-
-  const isResume =
-    t.includes('curriculum vitae') || t.includes('professional summary') ||
+    (t.includes('month') && t.includes('basic') && t.includes('hra') && t.includes('net') &&
+    (t.includes('₹') || t.includes('inr') || t.includes('rs.')));
+  const isResume = t.includes('curriculum vitae') || t.includes('professional summary') ||
     t.includes('career objective') || t.includes('work experience') ||
     (t.includes('experience') && t.includes('education') && t.includes('skills')) ||
     (t.includes('objective') && t.includes('skills') && t.includes('experience'));
-
-  const isJD =
-    t.includes('job description') || t.includes('we are looking for') ||
+  const isJD = t.includes('job description') || t.includes('we are looking for') ||
     t.includes('key responsibilities') || t.includes('role overview') ||
     t.includes('mandatory skills') || t.includes('good to have') ||
     t.includes('years of experience required') ||
     (t.includes('responsibilities') && t.includes('requirements') && !isResume);
-
-  const isOffer =
-    t.includes('offer letter') || t.includes('we are pleased to offer') ||
+  const isOffer = t.includes('offer letter') || t.includes('we are pleased to offer') ||
     t.includes('joining date') || t.includes('date of joining') ||
     (t.includes('cost to company') && t.includes('designation') && !isResume);
-
-  const isEPFO =
-    t.includes('epfo') || t.includes('service history') || t.includes('uan') ||
+  const isEPFO = t.includes('epfo') || t.includes('service history') || t.includes('uan') ||
     (t.includes('passbook') && t.includes('pf'));
-
-  const isBank =
-    t.includes('bank statement') || t.includes('account statement') ||
-    t.includes('account number') ||
-    (t.includes('transaction') && t.includes('closing balance'));
+  const isBank = t.includes('bank statement') || t.includes('account statement') ||
+    t.includes('account number') || (t.includes('transaction') && t.includes('closing balance'));
 
   if (isOffer)  return 'offer';
   if (isEPFO)   return 'epfo';
@@ -719,14 +769,12 @@ function detectType(text, fileName) {
   if (isJD)     return 'jd';
   if (isResume) return 'resume';
   if (isSalary) return 'salary';
-
   if (f.includes('resume') || f.includes('_cv') || f.startsWith('cv')) return 'resume';
   if (f.includes('jd') || f.includes('job'))   return 'jd';
   if (f.includes('offer'))                      return 'offer';
   if (f.includes('salary') || f.includes('payslip')) return 'salary';
   if (f.includes('epfo') || f.includes('uan'))  return 'epfo';
   if (f.includes('bank') || f.includes('statement')) return 'bank';
-
   return 'unknown';
 }
 
@@ -739,28 +787,18 @@ function looksLikeJD(text) {
 }
 
 function queueHasCTCDocs() {
-  const types = queue.map(d => d.detectedType);
-  return types.some(t => ['salary','bank','epfo'].includes(t));
+  return queue.map(d => d.detectedType).some(t => ['salary','bank','epfo'].includes(t));
 }
 
-// ── Priority sorting + doc limit enforcement ───────────────────────────────────
 function prioritizeQueue() {
-  // Build full doc list: resume first, then queue
-  const resumeDoc = session.resumeDoc
-    ? [{ ...session.resumeDoc, detectedType: 'resume' }]
-    : [];
-  const allDocs = [...resumeDoc, ...queue];
-
-  // Sort by priority
-  const sorted = allDocs.sort((a, b) => {
+  const resumeDoc = session.resumeDoc ? [{ ...session.resumeDoc, detectedType: 'resume' }] : [];
+  const allDocs   = [...resumeDoc, ...queue];
+  const sorted    = allDocs.sort((a, b) => {
     const pa = DOC_PRIORITY.indexOf(a.detectedType || 'unknown');
     const pb = DOC_PRIORITY.indexOf(b.detectedType || 'unknown');
     return (pa === -1 ? 99 : pa) - (pb === -1 ? 99 : pb);
   });
-
-  const kept = sorted.slice(0, MAX_DOCS);
-  const dropped = sorted.slice(MAX_DOCS);
-  return { kept, dropped };
+  return { kept: sorted.slice(0, MAX_DOCS), dropped: sorted.slice(MAX_DOCS) };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -771,9 +809,9 @@ async function extractPDF(file) {
     const buf = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({data:buf}).promise;
     let out = '';
-    for (let i=1;i<=Math.min(pdf.numPages,12);i++) {
+    for (let i=1; i<=Math.min(pdf.numPages,12); i++) {
       const page = await pdf.getPage(i);
-      const ct = await page.getTextContent();
+      const ct   = await page.getTextContent();
       out += ct.items.map(s=>s.str).join(' ') + '\n';
     }
     return out.trim().length > 30 ? out.trim() : '[Scanned PDF — no text layer]';
@@ -794,28 +832,34 @@ async function toBase64(file) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  HANDLE UPLOADED FILES — pipeline step: UPLOAD → DETECT → VALIDATE → QUEUE
+//  HANDLE UPLOADED FILES
 // ══════════════════════════════════════════════════════════════════════════════
 async function handleFiles(fileList) {
-  if (state === STATES.ANALYZING) return; // block during analysis
+  if (state === STATES.ANALYZING) return;
 
-  const files = Array.from(fileList).filter(f =>
-    f.name.match(/\.(pdf|jpg|jpeg|png|docx|doc)$/i)
-  );
+  const files = Array.from(fileList).filter(f => f.name.match(/\.(pdf|jpg|jpeg|png|docx|doc)$/i));
   if (!files.length) return;
-
   if (!session.started) startSession();
 
   readingCount += files.length;
   transition(STATES.UPLOADING, { reason: `reading ${files.length} files` });
 
   await Promise.all(files.map(async file => {
-    // Step 1: Extract text
+    // FIX: file size guard — reject before extracting
+    if (file.size > MAX_FILE_BYTES) {
+      readingCount--;
+      addMsg('agent',
+        `⚠️ **File too large:** "${file.name}" (${(file.size/1024/1024).toFixed(1)} MB) — max 5MB.\n` +
+        `Compress the PDF or export a shorter version and re-upload.`
+      );
+      return;
+    }
+
     let text = '', b64 = null;
     if (file.type === 'application/pdf') {
       text = await extractPDF(file);
     } else if (file.type.startsWith('image/')) {
-      b64 = await toBase64(file);
+      b64  = await toBase64(file);
       text = '[image]';
     } else if (file.name.match(/\.docx?$/i)) {
       text = await extractDOCX(file);
@@ -823,98 +867,58 @@ async function handleFiles(fileList) {
       text = '[unsupported]';
     }
 
-    // Step 2: Detect type
     const dtype = b64 ? 'unknown' : detectType(text, file.name);
-
-    // Step 3: Dedup by content hash
-    const hash = simpleHash(b64 || text);
-    const isDup = session.resumeDoc?.hash === hash ||
-                  queue.some(d => d.hash === hash);
+    const hash  = simpleHash(b64 || text);
+    const isDup = session.resumeDoc?.hash === hash || queue.some(d => d.hash === hash);
     if (isDup) {
       readingCount--;
-      showDupWarning(file.name);
+      addMsg('agent', `⚠️ **Duplicate skipped:** "${file.name}" — identical content already in queue.`);
       return;
     }
 
-    const id = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
+    const id  = 'doc_' + Date.now() + '_' + Math.random().toString(36).slice(2,5);
     const doc = { id, fileName: file.name, text, detectedType: dtype, hash };
     if (b64) { doc.base64Image = b64; doc.imageMediaType = file.type; }
 
-    // Step 4: Validate — is it a resume? If no resume yet, only accept resume
     if (!session.resumeUploaded) {
       if (dtype === 'resume') {
-        // Accept as session resume
-        session.resumeDoc = doc;
+        session.resumeDoc      = doc;
         session.resumeUploaded = true;
         persistSession();
         renderChip({ id, fileName: file.name, type: dtype, isResume: true });
         addMsg('agent',
           `✅ **Resume confirmed:** ${file.name}\n\n` +
-          `Upload additional documents (JD, EPFO, salary, bank, offer letter) and click **Analyze** when ready.`
+          `Upload additional documents (JD, EPFO, salary, bank, offer letter) and click **Analyze** when ready.\n\n` +
+          `💡 Tip: Press **Ctrl+Enter** to trigger analysis at any time.`
         );
         startChat();
       } else {
-        // BLOCK — not a resume, and no resume yet
         readingCount--;
         addMsg('agent',
           `⛔ **Resume required first.**\n\n` +
           `Upload the **candidate resume** before adding other documents.\n` +
           `Document "${file.name}" detected as: **${dtype}** — queued once resume is confirmed.`
         );
-        // Still show as chip but mark as blocked
         renderChip({ id, fileName: file.name, type: dtype, blocked: true });
         return;
       }
     } else {
-      // Resume already uploaded — add to queue
-      if (dtype === 'resume') {
-        // Additional resume — add to queue for multi-candidate
-        queue.push(doc);
-        renderChip({ id, fileName: file.name, type: dtype });
-      } else {
-        queue.push(doc);
-        renderChip({ id, fileName: file.name, type: dtype });
-      }
+      queue.push(doc);
+      renderChip({ id, fileName: file.name, type: dtype });
     }
 
     readingCount--;
   }));
 
   document.getElementById('file-in').value = '';
-
-  // Step 5: After all files processed, advance pipeline state
   advancePipelineState();
 }
 
-function showDupWarning(fileName) {
-  // Show inline in chat rather than silently dropping
-  addMsg('agent', `⚠️ **Duplicate skipped:** "${fileName}" — identical content already in queue.`);
-}
-
 function advancePipelineState() {
-  if (readingCount > 0) {
-    transition(STATES.UPLOADING, { reason: 'still reading' });
-    return;
-  }
-
-  if (!session.resumeUploaded) {
-    transition(STATES.RESUME_NEEDED);
-    return;
-  }
-
-  if (queue.length === 0) {
-    // Only resume in session, no queued docs
-    // Show resume gate has passed, now waiting for more docs or analyze
-    transition(STATES.QUEUED, { reason: 'resume only' });
-    return;
-  }
-
-  // Check if CTC is needed
-  if (queueHasCTCDocs() && !session.claimedCTC) {
-    transition(STATES.CTC_NEEDED);
-    return;
-  }
-
+  if (readingCount > 0) { transition(STATES.UPLOADING, { reason: 'still reading' }); return; }
+  if (!session.resumeUploaded) { transition(STATES.RESUME_NEEDED); return; }
+  if (queue.length === 0) { transition(STATES.QUEUED, { reason: 'resume only' }); return; }
+  if (queueHasCTCDocs() && !session.claimedCTC) { transition(STATES.CTC_NEEDED); return; }
   transition(STATES.READY);
 }
 
@@ -922,7 +926,7 @@ function advancePipelineState() {
 //  CTC SUBMISSION
 // ══════════════════════════════════════════════════════════════════════════════
 function submitCTC() {
-  const val = parseFloat(document.getElementById('ctc-input').value);
+  const val   = parseFloat(document.getElementById('ctc-input').value);
   const input = document.getElementById('ctc-input');
   if (!val || val <= 0) {
     input.classList.add('invalid');
@@ -937,36 +941,23 @@ function submitCTC() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-//  RUN ANALYSIS — SINGLE combined call, fires ONCE
+//  RUN ANALYSIS
 // ══════════════════════════════════════════════════════════════════════════════
 async function runAnalysis() {
-  if (state === STATES.ANALYZING) return; // already running
-  if (!session.resumeUploaded) {
-    addMsg('agent', '⛔ **Resume required** before running analysis.');
-    return;
-  }
+  if (state === STATES.ANALYZING) return;
+  if (!session.resumeUploaded) { addMsg('agent', '⛔ **Resume required** before running analysis.'); return; }
+  if (queueHasCTCDocs() && !session.claimedCTC) { transition(STATES.CTC_NEEDED); return; }
 
-  // CTC gate
-  if (queueHasCTCDocs() && !session.claimedCTC) {
-    transition(STATES.CTC_NEEDED);
-    return;
-  }
-
-  // Build doc list: resume + queue (priority sorted + limited)
   const { kept, dropped } = prioritizeQueue();
-
   if (dropped.length > 0) {
     addMsg('agent',
-      `⚠️ **Doc limit (${MAX_DOCS} max):** Dropping lowest-priority docs: ${dropped.map(d => d.fileName).join(', ')}\n` +
-      `Analyzing: ${kept.map(d => d.fileName).join(', ')}`
+      `⚠️ **Doc limit (${MAX_DOCS} max):** Dropping lowest-priority docs: ${dropped.map(d=>d.fileName).join(', ')}\n` +
+      `Analyzing: ${kept.map(d=>d.fileName).join(', ')}`
     );
   }
 
-  // Truncate each doc
   const payload = kept.map(doc => ({
-    id: doc.id,
-    fileName: doc.fileName,
-    detectedType: doc.detectedType,
+    id: doc.id, fileName: doc.fileName, detectedType: doc.detectedType,
     text: doc.base64Image ? '' : (doc.text || '').slice(0, DOC_CHAR_LIMITS[doc.detectedType] || 800),
     ...(doc.base64Image ? { base64Image: doc.base64Image, imageMediaType: doc.imageMediaType } : {}),
   }));
@@ -975,19 +966,11 @@ async function runAnalysis() {
   addMsg('user', `🔬 Analyze (${payload.length} docs): ${docLabel}`);
   session.history.push({ role: 'user', content: `Analyze: ${docLabel}` });
 
-  // Clear queue (analysis has started — do not re-trigger)
   queue = [];
   document.getElementById('files-row').innerHTML = '';
-
-  // Re-add the resume chip (it stays in session)
   if (session.resumeDoc) {
-    renderChip({
-      id: session.resumeDoc.id,
-      fileName: session.resumeDoc.fileName,
-      type: 'resume',
-      isResume: true,
-      noRemove: true,
-    });
+    renderChip({ id: session.resumeDoc.id, fileName: session.resumeDoc.fileName,
+                 type: 'resume', isResume: true, noRemove: true });
   }
 
   transition(STATES.ANALYZING);
@@ -997,11 +980,7 @@ async function runAnalysis() {
     const res = await fetch('/.netlify/functions/agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        documents: payload,
-        history: session.history.slice(-6),
-        claimedCTC: session.claimedCTC,
-      }),
+      body: JSON.stringify({ documents: payload, history: session.history.slice(-6), claimedCTC: session.claimedCTC }),
     });
 
     removeTyping();
@@ -1010,26 +989,21 @@ async function runAnalysis() {
       const errBody = await res.text().catch(() => '');
       let errMsg = `Server ${res.status}`;
       try { errMsg = JSON.parse(errBody).error || errMsg; } catch(e) {}
-
       if (res.status === 400) {
-        const parsed = JSON.parse(errBody).code;
-        if (parsed === 'RESUME_REQUIRED') {
-          session.resumeUploaded = false;
-          session.resumeDoc = null;
-          persistSession();
-          errMsg = 'Resume validation failed on server. Please re-upload the resume.';
-        }
+        try {
+          const parsed = JSON.parse(errBody);
+          if (parsed.code === 'RESUME_REQUIRED') {
+            session.resumeUploaded = false; session.resumeDoc = null; persistSession();
+          }
+        } catch(e) {}
       }
-
       throw new Error(errMsg);
     }
 
     const data = await res.json();
 
-    // Handle needs_ctc from server (edge case)
     if (data.type === 'needs_ctc') {
       session.claimedCTC = null;
-      // Re-queue the docs
       queue = kept.filter(d => d.detectedType !== 'resume');
       kept.filter(d => d.detectedType !== 'resume').forEach(d =>
         renderChip({ id: d.id, fileName: d.fileName, type: d.detectedType })
@@ -1039,33 +1013,26 @@ async function runAnalysis() {
       return;
     }
 
-    if (data.error) {
-      throw new Error(data.error);
-    }
+    if (data.error) throw new Error(data.error);
 
-    // SUCCESS
     session.lastResult = data;
     session.history.push({ role: 'assistant', content: summarize(data) });
     persistSession();
 
     addMsg('agent', bub => renderResult(data, bub));
 
-    // Mark pipeline done
     document.getElementById('ps-output').classList.add('done');
     document.getElementById('ps-output').innerHTML = '⑥ Output ✓';
-
     transition(STATES.DONE);
 
   } catch(err) {
     removeTyping();
-    lastError = {
-      message: err.message,
-      retryFn: runAnalysis,
-    };
-    // DO NOT clear session, DO NOT proceed
+    lastError = { message: err.message, retryFn: runAnalysis };
+    // FIX: show clean humanized error in chat bubble, not raw JSON
+    const niceMsg = humanizeError(err.message);
     addMsg('agent',
-      `🚨 **Analysis failed:** ${err.message}\n\n` +
-      `Session preserved — click **Retry** or try again. No data was lost.`
+      `🚨 **Analysis failed**\n\n${niceMsg}\n\n` +
+      `Session preserved — click **Retry** in the banner or try again. No data was lost.`
     );
     transition(STATES.ERROR);
   }
@@ -1081,39 +1048,28 @@ async function send() {
   if (state === STATES.ANALYZING) return;
   const input = document.getElementById('txt');
   const text  = input.value.trim();
-
   if (!text) return;
 
-  // Resume not yet uploaded? Block everything
   if (!session.resumeUploaded) {
     input.value = ''; autoResize(input);
     if (!session.started) startSession();
-    addMsg('agent',
-      '⛔ **Resume required first.**\n\nUse the 📎 button to upload the candidate resume.');
+    addMsg('agent', '⛔ **Resume required first.**\n\nUse the 📎 button to upload the candidate resume.');
     return;
   }
 
-  // JD pasted as text → add to queue (NOT auto-analyze)
   if (looksLikeJD(text)) {
     input.value = ''; autoResize(input);
-    const id = 'jd_' + Date.now();
+    const id   = 'jd_' + Date.now();
     const hash = simpleHash(text);
-    const isDup = queue.some(d => d.hash === hash);
-    if (isDup) {
-      addMsg('agent', '⚠️ JD already queued — identical content.');
-      return;
-    }
+    if (queue.some(d => d.hash === hash)) { addMsg('agent', '⚠️ JD already queued — identical content.'); return; }
     const jdDoc = { id, fileName: 'pasted_jd.txt', text, detectedType: 'jd', hash };
     queue.push(jdDoc);
     renderChip({ id, fileName: 'pasted_jd.txt', type: 'jd' });
-    addMsg('agent',
-      '📋 **JD added to queue.** Click **Analyze** when ready to run the full combined analysis.'
-    );
+    addMsg('agent', '📋 **JD added to queue.** Click **Analyze** (or press **Ctrl+Enter**) when ready.');
     advancePipelineState();
     return;
   }
 
-  // Normal conversational message
   input.value = ''; autoResize(input);
   addMsg('user', text);
   session.history.push({ role: 'user', content: text });
@@ -1129,9 +1085,9 @@ async function send() {
     if (!res.ok) throw new Error('Server ' + res.status);
     const data = await res.json();
     removeTyping();
-    if (data.error) addMsg('agent', '⚠️ ' + data.error);
+    if (data.error) addMsg('agent', '⚠️ ' + humanizeError(data.error));
     else { addMsg('agent', data.reply || ''); session.history.push({ role: 'assistant', content: data.reply || '' }); }
-  } catch(e) { removeTyping(); addMsg('agent', '⚠️ ' + e.message); }
+  } catch(e) { removeTyping(); addMsg('agent', '⚠️ ' + humanizeError(e.message)); }
 
   document.getElementById('send-btn').disabled = false;
   setStatus('Ready');
@@ -1142,22 +1098,20 @@ async function send() {
 // ══════════════════════════════════════════════════════════════════════════════
 const TYPE_UI = {
   resume:{label:'RESUME',cls:'ct-resume'}, jd:{label:'JD',cls:'ct-jd'},
-  offer:{label:'OFFER',cls:'ct-offer'}, salary:{label:'SALARY',cls:'ct-salary'},
-  epfo:{label:'EPFO',cls:'ct-epfo'}, bank:{label:'BANK',cls:'ct-bank'},
+  offer:{label:'OFFER',cls:'ct-offer'},   salary:{label:'SALARY',cls:'ct-salary'},
+  epfo:{label:'EPFO',cls:'ct-epfo'},      bank:{label:'BANK',cls:'ct-bank'},
   unknown:{label:'?',cls:'ct-unknown'}
 };
 
 function renderChip({ id, fileName, type, loading, isResume, blocked, noRemove }) {
-  const row = document.getElementById('files-row');
-  // Remove existing chip with same id
+  const row      = document.getElementById('files-row');
   const existing = document.getElementById('chip_' + id);
   if (existing) existing.remove();
-
-  const el = document.createElement('div');
+  const el  = document.createElement('div');
   el.className = 'chip' + (isResume ? ' chip-resume' : '') + (blocked ? ' chip-error' : '');
   el.id = 'chip_' + id;
-  const ui = TYPE_UI[type] || TYPE_UI.unknown;
-  const removeBtn = (noRemove || isResume) ? '' : `<span class="chip-x" onclick="removeQueuedDoc('${id}')">×</span>`;
+  const ui         = TYPE_UI[type] || TYPE_UI.unknown;
+  const removeBtn  = (noRemove || isResume) ? '' : `<span class="chip-x" onclick="removeQueuedDoc('${id}')">×</span>`;
   const blockedMark = blocked ? `<span class="chip-dup">BLOCKED</span>` : '';
   el.innerHTML = `<span>📄</span><span style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${fileName}">${fileName}</span><span class="chip-type ${ui.cls}" id="ctype_${id}">${loading?'…':ui.label}</span>${blockedMark}${removeBtn}`;
   row.appendChild(el);
@@ -1185,17 +1139,9 @@ function startSession() {
   session.started = true;
   document.getElementById('pipeline-bar').classList.add('show');
   transition(STATES.RESUME_NEEDED);
-
-  // If session was restored from localStorage with resume
   if (session.resumeUploaded && session.resumeDoc) {
     startChat();
-    renderChip({
-      id: session.resumeDoc.id,
-      fileName: session.resumeDoc.fileName,
-      type: 'resume',
-      isResume: true,
-      noRemove: true,
-    });
+    renderChip({ id: session.resumeDoc.id, fileName: session.resumeDoc.fileName, type: 'resume', isResume: true, noRemove: true });
     addMsg('agent',
       `✅ **Session restored:** Resume "${session.resumeDoc.fileName}" is confirmed.\n\n` +
       `Upload additional documents and click **Analyze** to run analysis.`
@@ -1210,15 +1156,15 @@ function startChat() {
   document.getElementById('chat-area').style.display = 'flex';
   document.getElementById('chat-area').style.flexDirection = 'column';
   document.getElementById('input-bar').style.display = '';
-  document.getElementById('ib-hint').textContent = 'Paste JD · Upload more docs · Click Analyze when ready';
+  document.getElementById('ib-hint').textContent = 'Paste JD · Upload more docs · Ctrl+Enter to Analyze';
 }
 
 function newSession() {
   state = STATES.IDLE;
-  session = { started: false, resumeUploaded: false, resumeDoc: null, history: [], claimedCTC: null, lastResult: null };
+  session = { started:false, resumeUploaded:false, resumeDoc:null, history:[], claimedCTC:null, lastResult:null };
   queue = []; readingCount = 0; lastError = null;
+  stopAnalysisProgress();
   localStorage.removeItem(SESSION_KEY);
-
   document.getElementById('messages').innerHTML = '';
   document.getElementById('chat-area').style.display = 'none';
   document.getElementById('welcome').style.display = 'flex';
@@ -1230,10 +1176,10 @@ function newSession() {
   document.getElementById('txt').value = '';
   document.getElementById('ctc-input').value = '';
   document.getElementById('pipeline-bar').classList.remove('show');
+  document.getElementById('export-btn').classList.remove('show');
+  document.getElementById('analyze-pin').classList.remove('show');
   hideStageBanner();
   setStatus('Ready');
-
-  // Reset pipeline steps
   ['ps-upload','ps-detect','ps-validate','ps-queue','ps-analyze','ps-output'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.className = 'pb-step blocked';
@@ -1247,8 +1193,7 @@ function addMsg(role, content) {
   const container = document.getElementById('messages');
   const row = document.createElement('div');
   row.className = `msg-row ${role}`;
-  const initials = role === 'agent' ? 'P' : 'HR';
-  row.innerHTML = `<div class="av ${role}">${initials}</div><div class="bubble ${role}"></div>`;
+  row.innerHTML = `<div class="av ${role}">${role==='agent'?'P':'HR'}</div><div class="bubble ${role}"></div>`;
   container.appendChild(row);
   const bub = row.querySelector('.bubble');
   if (typeof content === 'string') bub.innerHTML = md(content);
@@ -1268,6 +1213,88 @@ function addTyping() {
 function removeTyping() { const el = document.getElementById('typing'); if (el) el.remove(); }
 function md(t) {
   return (t||'').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/`([^`]+)`/g,'<code>$1</code>').replace(/\n/g,'<br/>');
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  EXPORT REPORT — generates printable HTML from last result
+// ══════════════════════════════════════════════════════════════════════════════
+function exportReport() {
+  const data = session.lastResult;
+  if (!data) return;
+
+  const ts   = new Date().toLocaleString('en-IN', { dateStyle:'medium', timeStyle:'short' });
+  const dec  = data.final_decision || data.overall_verdict || data.verdict || '—';
+  const cand = data.candidate?.name || data.candidate_name || 'Candidate';
+  const mode = data._meta?.analysis_mode || data.type || 'analysis';
+  const decColor = dec==='HIRE'||dec==='GENUINE'||dec==='AUTHENTIC'||dec==='SHORTLIST'?'#0d7377'
+                 : dec==='REJECT'||dec==='FAKE'||dec==='MISMATCH'?'#c0392b' : '#c47c00';
+
+  const rows = [];
+  if (data.candidate?.total_experience_years != null)
+    rows.push(['Total Experience', data.candidate.total_experience_years + ' years']);
+  if (data.candidate?.current_role)
+    rows.push(['Current Role', data.candidate.current_role]);
+  if (data.scorecard?.match_percentage != null)
+    rows.push(['JD Match', data.scorecard.match_percentage + '%']);
+  if (data.ctc_check?.claimed_ctc_lpa || data.claimed_ctc_lpa)
+    rows.push(['Claimed CTC', '₹' + (data.ctc_check?.claimed_ctc_lpa || data.claimed_ctc_lpa) + ' LPA']);
+  if (data.fraud_risk)
+    rows.push(['Fraud Risk', data.fraud_risk]);
+  if (data.final_decision_reason || data.overall_verdict_reason || data.verdict_reason)
+    rows.push(['Reason', data.final_decision_reason || data.overall_verdict_reason || data.verdict_reason]);
+
+  const tableRows = rows.map(([k,v]) =>
+    `<tr><td style="padding:8px 14px;font-weight:600;color:#3d7070;background:#eef4f4;width:38%;border-bottom:1px solid #c4dede">${k}</td><td style="padding:8px 14px;border-bottom:1px solid #c4dede">${escapeHtml(String(v))}</td></tr>`
+  ).join('');
+
+  const redFlags = (data.fraud_signals || data.red_flags || []).map(f =>
+    `<li style="margin:4px 0;color:#c0392b">${escapeHtml(f)}</li>`
+  ).join('');
+  const greenFlags = (data.positive_signals || []).map(f =>
+    `<li style="margin:4px 0;color:#0d7377">${escapeHtml(f)}</li>`
+  ).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<title>ParamkaraCorp Report — ${escapeHtml(cand)}</title>
+<style>
+body{font-family:'Segoe UI',Arial,sans-serif;color:#0d2b2c;background:#f7f6f2;margin:0;padding:0}
+.wrap{max-width:800px;margin:0 auto;padding:40px 32px}
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:32px;padding-bottom:20px;border-bottom:2px solid #c4dede}
+.logo{font-size:1.4rem;font-weight:800;color:#0d2b2c}.logo em{color:#0d7377;font-style:normal}
+.meta{font-size:.8rem;color:#7a9a9b;text-align:right;line-height:1.7}
+.decision{display:flex;align-items:center;gap:16px;padding:20px 24px;border-radius:10px;margin-bottom:28px;border:2px solid ${decColor};background:${decColor}18}
+.dec-label{font-size:.75rem;font-weight:600;color:#7a9a9b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.dec-val{font-size:1.6rem;font-weight:800;color:${decColor}}
+.section{margin-bottom:24px}
+.section-title{font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a9a9b;margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #c4dede}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 1px 4px rgba(13,115,119,0.08)}
+ul{margin:0;padding-left:18px}
+.footer{margin-top:40px;padding-top:16px;border-top:1px solid #c4dede;font-size:.72rem;color:#7a9a9b;text-align:center}
+@media print{body{background:#fff}.wrap{padding:20px}}
+</style></head><body><div class="wrap">
+<div class="header">
+  <div class="logo">Paramkara<em>Corp</em><div style="font-size:.8rem;font-weight:400;color:#7a9a9b;margin-top:3px">HR Intelligence Report</div></div>
+  <div class="meta">Candidate: <strong>${escapeHtml(cand)}</strong><br/>Mode: ${mode.replace(/_/g,' ').toUpperCase()}<br/>Generated: ${ts}</div>
+</div>
+<div class="decision">
+  <div>
+    <div class="dec-label">Final Decision</div>
+    <div class="dec-val">${escapeHtml(dec)}</div>
+  </div>
+</div>
+${tableRows ? `<div class="section"><div class="section-title">Summary</div><table>${tableRows}</table></div>` : ''}
+${redFlags   ? `<div class="section"><div class="section-title" style="color:#c0392b">⚠ Red Flags / Fraud Signals</div><ul>${redFlags}</ul></div>` : ''}
+${greenFlags ? `<div class="section"><div class="section-title" style="color:#0d7377">✓ Positive Signals</div><ul>${greenFlags}</ul></div>` : ''}
+<div class="footer">ParamkaraCorp HR Intelligence · Generated ${ts} · For internal HR use only</div>
+</div></body></html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `PCorp_Report_${(cand.replace(/\s+/g,'_') || 'report')}_${Date.now()}.html`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1291,7 +1318,6 @@ document.addEventListener('drop', e => {
 function renderResult(data, bub) {
   const t = data.type || '';
   let html = '';
-
   if      (t === 'full_analysis')      html = renderFullAnalysis(data);
   else if (t === 'jd_resume')          html = renderJD(data);
   else if (t === 'multi_rank')         html = renderMulti(data);
@@ -1304,25 +1330,39 @@ function renderResult(data, bub) {
   else if (data.scorecard || data.skill_match) html = renderJD(data);
   else html = md(data.reply || JSON.stringify(data, null, 2));
 
-  // Append dropped docs notice if any
+  // Dropped docs notice
   if (data._meta?.docs_dropped > 0) {
     html += `<div style="margin-top:8px;padding:8px 12px;background:var(--amber-dim);border:1px solid rgba(196,124,0,0.2);border-radius:8px;font-size:.72rem;color:var(--amber)">
-      ⚠ ${data._meta.docs_dropped} doc(s) were dropped due to the ${data._meta.docs_analyzed + data._meta.docs_dropped}-doc limit (max ${data._meta.docs_analyzed}).
+      ⚠ ${data._meta.docs_dropped} doc(s) were dropped (max ${data._meta.docs_analyzed + data._meta.docs_dropped} limit).
+    </div>`;
+  }
+
+  // FIX: vision fallback notice shown to user
+  if (data._meta?.vision_fallback) {
+    html += `<div class="vision-fallback-notice">⚠ One image could not be processed by the vision model — analysis was run on text only. Re-upload as PDF for best results.</div>`;
+  }
+
+  // Meta footer
+  if (data._meta) {
+    const m = data._meta;
+    html += `<div class="result-meta">
+      <span>Mode: <strong>${(m.analysis_mode||'').replace(/_/g,' ')}</strong></span>
+      <span>Docs: ${m.docs_analyzed || '—'}</span>
+      <span>Model: ${(m.model_used||'').replace('llama-','').replace('-versatile','').replace('-instant','')}</span>
+      ${m.request_id ? `<span>ID: ${m.request_id}</span>` : ''}
     </div>`;
   }
 
   bub.innerHTML = html;
 }
 
-// ── NEW: Full unified analysis renderer ───────────────────────────────────────
+// ── Full unified analysis ──────────────────────────────────────────────────────
 function renderFullAnalysis(data) {
   let h = '<div class="result-section">';
-
-  // Final decision hero
   const dec = data.final_decision || 'MAYBE';
-  const decCls = dec === 'HIRE' ? 'fd-hire' : dec === 'REJECT' ? 'fd-reject' : 'fd-maybe';
-  const decIcon = dec === 'HIRE' ? '✅' : dec === 'REJECT' ? '❌' : '⚠️';
-  const frisk = (data.fraud_risk || 'MEDIUM').toLowerCase();
+  const decCls  = dec === 'HIRE' ? 'fd-hire'   : dec === 'REJECT' ? 'fd-reject'  : 'fd-maybe';
+  const decIcon = dec === 'HIRE' ? '✅'         : dec === 'REJECT' ? '❌'         : '⚠️';
+  const frisk   = (data.fraud_risk || 'MEDIUM').toLowerCase();
   h += `<div class="final-decision ${decCls}">
     <div class="fd-icon">${decIcon}</div>
     <div class="fd-info">
@@ -1332,7 +1372,6 @@ function renderFullAnalysis(data) {
     <span class="fraud-badge fraud-${frisk}">Fraud Risk: ${data.fraud_risk || 'MEDIUM'}</span>
   </div>`;
 
-  // Candidate
   const cand = data.candidate || {};
   if (cand.name) {
     h += `<div style="font-size:.78rem;color:var(--muted2);margin-bottom:10px">
@@ -1342,15 +1381,10 @@ function renderFullAnalysis(data) {
     </div>`;
   }
 
-  // Skill match
   const sm = data.skill_match || {};
   if (sm.present && sm.skills?.length) {
-    const pct = sm.match_percentage || 0;
-    const rec = sm.recommendation || 'MAYBE';
-    h += `<div class="rcard"><div class="rcard-head">
-      <span class="rcard-title">📊 Skill Match</span>
-      ${recBadge(rec)}
-    </div><div class="rcard-body">`;
+    const pct = sm.match_percentage || 0, rec = sm.recommendation || 'MAYBE';
+    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">📊 Skill Match</span>${recBadge(rec)}</div><div class="rcard-body">`;
     h += `<div class="verdict-hero" style="margin-bottom:8px">${scoreRing(pct, scoreColor(pct))}<div class="verdict-info">
       <div class="verdict-row"><span class="verdict-title">Match Score</span>${recBadge(rec)}</div>
       <div class="verdict-reason">${sm.recommendation_reason || ''}</div>
@@ -1359,26 +1393,22 @@ function renderFullAnalysis(data) {
     h += `<table class="skill-table"><thead><tr><th style="text-align:left">Skill</th><th>Required</th><th>Candidate Has</th><th style="min-width:80px">Bar</th><th>Status</th></tr></thead><tbody>`;
     sm.skills.forEach(s => {
       const req = s.required_years || 0, actual = s.actual_years || 0;
-      const fp = req > 0 ? Math.min(100, (actual / req) * 100) : actual > 0 ? 100 : 0;
-      const c = s.matched ? 'var(--green)' : actual > 0 ? 'var(--amber)' : 'var(--red)';
-      const badge = s.matched ? 'smb-match' : actual > 0 ? 'smb-partial' : 'smb-miss';
-      const label = s.matched ? '✓ Match' : actual > 0 ? '~ Partial' : '✗ Missing';
+      const fp  = req > 0 ? Math.min(100,(actual/req)*100) : actual>0 ? 100 : 0;
+      const c   = s.matched ? 'var(--green)' : actual>0 ? 'var(--amber)' : 'var(--red)';
+      const badge = s.matched ? 'smb-match' : actual>0 ? 'smb-partial' : 'smb-miss';
+      const label = s.matched ? '✓ Match' : actual>0 ? '~ Partial' : '✗ Missing';
       h += `<tr><td class="skill-name-cell">${s.skill}</td><td class="skill-years">${req?req+'y':'—'}</td><td class="skill-years" style="color:${c};font-weight:600">${actual?actual+'y':'—'}</td><td class="skill-bar-cell"><div class="skill-bar-track"><div class="skill-bar-fill" style="width:${fp}%;background:${c}"></div></div></td><td><span class="skill-match-badge ${badge}">${label}</span></td></tr>`;
     });
     h += `</tbody></table></div></div>`;
   }
 
-  // Gap analysis
   const ga = data.gap_analysis || {};
   if (ga.present) {
-    h += `<div class="rcard"><div class="rcard-head">
-      <span class="rcard-title">📅 Employment Timeline</span>
-      ${verdictBadge(ga.verdict)}
-    </div><div class="rcard-body">`;
+    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">📅 Employment Timeline</span>${verdictBadge(ga.verdict)}</div><div class="rcard-body">`;
     if (ga.gaps?.length) {
       h += `<div class="check-list">`;
       ga.gaps.forEach(g => {
-        const st = g.severity === 'SHORT' ? 'PASS' : g.severity === 'MEDIUM' ? 'WARN' : 'FAIL';
+        const st = g.severity==='SHORT'?'PASS':g.severity==='MEDIUM'?'WARN':'FAIL';
         h += `<div class="check-item">${checkIcon(st)}<span>${g.from_company} → ${g.to_company} (${g.gap_months}mo gap)</span></div>`;
       });
       h += `</div>`;
@@ -1388,21 +1418,14 @@ function renderFullAnalysis(data) {
     h += `</div></div>`;
   }
 
-  // CTC check
   const ctc = data.ctc_check || {};
-  if (ctc.present) {
-    h += renderCTCVerification(ctc);
-  }
+  if (ctc.present) h += renderCTCVerification(ctc);
 
-  // EPFO check
   const epfo = data.epfo_check || {};
   if (epfo.present) {
-    h += `<div class="rcard"><div class="rcard-head">
-      <span class="rcard-title">📋 EPFO Cross-Check</span>
-      ${verdictBadge(epfo.verdict)}
-    </div><div class="rcard-body">
+    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">📋 EPFO Cross-Check</span>${verdictBadge(epfo.verdict)}</div><div class="rcard-body">
       <div style="font-size:.78rem;color:var(--muted2);margin-bottom:6px">${epfo.verdict_reason || ''}</div>
-      ${epfo.inflation_years != null ? `<div style="font-size:.75rem">Experience inflation: <strong style="color:${epfo.inflation_years > 0 ? 'var(--red)' : 'var(--green)'}">${epfo.inflation_years > 0 ? '+' : ''}${epfo.inflation_years}y</strong></div>` : ''}
+      ${epfo.inflation_years != null ? `<div style="font-size:.75rem">Experience inflation: <strong style="color:${epfo.inflation_years>0?'var(--red)':'var(--green)'}">${epfo.inflation_years>0?'+':''}${epfo.inflation_years}y</strong></div>` : ''}
     </div></div>`;
     if (epfo.red_flags?.length) {
       h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ EPFO Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;
@@ -1411,21 +1434,15 @@ function renderFullAnalysis(data) {
     }
   }
 
-  // Offer check
   const offer = data.offer_check || {};
   if (offer.present) {
-    h += `<div class="rcard"><div class="rcard-head">
-      <span class="rcard-title">📩 Offer Letter</span>
-      ${verdictBadge(offer.verdict)}
-    </div><div class="rcard-body">
+    h += `<div class="rcard"><div class="rcard-head"><span class="rcard-title">📩 Offer Letter</span>${verdictBadge(offer.verdict)}</div><div class="rcard-body">
       <div style="font-size:.78rem;color:var(--muted2)">${offer.verdict_reason || ''}</div>
       ${offer.overall_score != null ? `<div style="font-size:.72rem;margin-top:4px">Score: <strong>${offer.overall_score}/100</strong></div>` : ''}
     </div></div>`;
   }
 
-  // Fraud signals
-  const fraudSignals = data.fraud_signals || [];
-  const positiveSignals = data.positive_signals || [];
+  const fraudSignals = data.fraud_signals || [], positiveSignals = data.positive_signals || [];
   if (fraudSignals.length || positiveSignals.length) {
     h += `<div class="sg-grid">`;
     if (positiveSignals.length) {
@@ -1440,15 +1457,14 @@ function renderFullAnalysis(data) {
     }
     h += `</div>`;
   }
-
   return h + '</div>';
 }
 
+// ── Helper widgets ─────────────────────────────────────────────────────────────
 function scoreRing(pct,color) {
   const c=Math.round(2*Math.PI*28);
   return `<div class="score-ring-wrap"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="var(--bg4)" stroke-width="4.5"/><circle cx="32" cy="32" r="28" fill="none" stroke="${color}" stroke-width="4.5" stroke-dasharray="${c}" stroke-dashoffset="${Math.round(c*(1-pct/100))}" stroke-linecap="round"/></svg><div class="score-num" style="color:${color}">${pct}%</div></div>`;
 }
-function recColor(r){return r==='SHORTLIST'?'var(--green)':r==='MAYBE'?'var(--amber)':'var(--red)';}
 function recBadge(r){const cls=r==='SHORTLIST'?'vb-green':r==='MAYBE'?'vb-amber':'vb-red';return `<span class="vbadge ${cls}">${r||'?'}</span>`;}
 function scoreColor(s){return s>=70?'var(--green)':s>=45?'var(--amber)':'var(--red)';}
 function verdictBadge(v){
@@ -1469,22 +1485,10 @@ function checkIcon(s){
 // ── JD vs Resume ───────────────────────────────────────────────────────────────
 function renderJD(data) {
   if(!data) return '';
-  const sc=data.scorecard||{},rec=sc.recommendation||'UNKNOWN',pct=sc.match_percentage||0;
-  const col=scoreColor(pct);
+  const sc=data.scorecard||{},rec=sc.recommendation||'UNKNOWN',pct=sc.match_percentage||0,col=scoreColor(pct);
   let h=`<div class="result-section">
-  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">
-    JD vs Resume — <strong style="color:var(--text)">${data.candidate?.name||'Candidate'}</strong>
-    · ${data.candidate?.total_experience_years||0}y exp
-    ${data.candidate?.current_role?`· <span style="color:var(--muted2)">${data.candidate.current_role}</span>`:''}
-  </div>
-  <div class="verdict-hero">
-    ${scoreRing(pct,col)}
-    <div class="verdict-info">
-      <div class="verdict-row"><span class="verdict-title">Match Score</span>${recBadge(rec)}</div>
-      <div class="verdict-reason">${sc.recommendation_reason||''}</div>
-      <div class="verdict-meta">${sc.mandatory_skills_met||0}/${sc.mandatory_skills_total||0} mandatory skills met</div>
-    </div>
-  </div>`;
+  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">JD vs Resume — <strong style="color:var(--text)">${data.candidate?.name||'Candidate'}</strong> · ${data.candidate?.total_experience_years||0}y exp ${data.candidate?.current_role?`· ${data.candidate.current_role}`:''}</div>
+  <div class="verdict-hero">${scoreRing(pct,col)}<div class="verdict-info"><div class="verdict-row"><span class="verdict-title">Match Score</span>${recBadge(rec)}</div><div class="verdict-reason">${sc.recommendation_reason||''}</div><div class="verdict-meta">${sc.mandatory_skills_met||0}/${sc.mandatory_skills_total||0} mandatory skills met</div></div></div>`;
   const skills=data.skill_match||[];
   if(skills.length){
     h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">Skill Match</span></div>
@@ -1513,8 +1517,7 @@ function renderJD(data) {
 function renderMulti(data) {
   if(!data||!data.candidates) return '';
   const sorted=[...data.candidates].sort((a,b)=>(b.match_percentage||0)-(a.match_percentage||0));
-  let h=`<div class="result-section">
-  <div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">Candidate Ranking — <strong>${sorted.length} candidates</strong> for <strong style="color:var(--amber)">${data.role||'this role'}</strong></div>
+  let h=`<div class="result-section"><div style="font-size:.78rem;color:var(--muted2);margin-bottom:8px">Candidate Ranking — <strong>${sorted.length} candidates</strong> for <strong style="color:var(--amber)">${data.role||'this role'}</strong></div>
   <div class="rcard"><div class="rcard-head"><span class="rcard-title">📊 Candidate Ranking</span></div>
   <table class="rank-table"><thead><tr><th>#</th><th>Candidate</th><th>Exp</th><th>Match %</th><th>Skills Met</th><th>Verdict</th></tr></thead><tbody>`;
   sorted.forEach((c,i)=>{
@@ -1522,8 +1525,7 @@ function renderMulti(data) {
     const rnCls=i===0?'rn-1':i===1?'rn-2':i===2?'rn-3':'rn-other';
     h+=`<tr><td><span class="rank-num ${rnCls}">${i+1}</span></td><td style="font-weight:600">${c.name||'Unknown'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td><span style="font-family:var(--font-mono);color:${col};font-weight:700">${pct}%</span></td><td class="skill-years">${c.mandatory_met||0}/${c.mandatory_total||0}</td><td>${recBadge(c.recommendation||'?')}</td></tr>`;
   });
-  h+=`</tbody></table></div></div>`;
-  return h;
+  return h+`</tbody></table></div></div>`;
 }
 
 // ── Offer letter ───────────────────────────────────────────────────────────────
@@ -1578,8 +1580,7 @@ function renderMultiResumeNoJD(data){
     const skills=(c.skills_extracted||[]).slice(0,4).map(s=>`${s.skill}(${s.years}y)`).join(', ');
     h+=`<tr><td><span class="rank-num rn-other" style="width:22px;height:22px;font-size:.72rem">${i+1}</span></td><td style="font-weight:600">${c.name||'—'}</td><td class="skill-years">${c.total_experience_years||0}y</td><td><span class="vbadge ${col}" style="font-size:.62rem">${verdict}${c.total_gap_months>0?' · '+c.total_gap_months+'mo':''}</span></td><td style="font-size:.7rem;color:var(--muted2)">${skills||'—'}</td></tr>`;
   });
-  h+=`</tbody></table></div></div>`;
-  return h;
+  return h+`</tbody></table></div></div>`;
 }
 
 // ── CTC Verification ───────────────────────────────────────────────────────────
@@ -1588,21 +1589,10 @@ function renderCTCVerification(data){
   const overallBadge=data.overall_verdict==='GENUINE'?'vb-green':data.overall_verdict==='SUSPICIOUS'?'vb-amber':'vb-red';
   const infClass=v=>v==='NORMAL'?'inf-normal':v==='INFLATED'?'inf-inflated':'inf-high';
   const pctStr=p=>p!=null?(p>0?'+':'')+p.toFixed(1)+'%':'—';
-
   let h=`<div class="result-section"><div class="verdict-hero"><div class="verdict-info"><div class="verdict-row"><span class="verdict-title">CTC Verification</span><span class="vbadge ${overallBadge}">${data.overall_verdict}</span><span class="vbadge" style="background:var(--bg3);color:var(--muted2);border-color:var(--border)">${data.confidence||'?'} confidence</span></div><div class="verdict-reason">${data.overall_verdict_reason||''}</div><div class="verdict-meta">Claimed: <strong>₹${data.claimed_ctc_lpa?.toFixed(2)||(data.claimed_ctc/100000)?.toFixed(2)||'?'} LPA</strong> · Sources: ${(data.sources_used||[]).join(' + ')||'—'}</div></div></div>`;
-
-  if(data.salary_slip?.present){
-    const s=data.salary_slip;const sBadge=s.verdict==='GENUINE'?'vb-green':s.verdict==='SUSPICIOUS'?'vb-amber':'vb-red';
-    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📄 Salary Slip</span><span class="vbadge ${sBadge}" style="font-size:.62rem">${s.verdict||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Gross/month</div><div class="ctc-stat-val">₹${s.extracted?.gross?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${s.derived_annual_ctc?(s.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(s.inflation_verdict)}">${pctStr(s.inflation_percent)}</div></div></div></div></div>`;
-  }
-  if(data.pf_analysis?.present){
-    const p=data.pf_analysis;
-    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📋 PF History</span><span class="vbadge ${p.consistency==='CONSISTENT'?'vb-green':p.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${p.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Avg PF/month</div><div class="ctc-stat-val">₹${p.avg_pf_monthly?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_annual_ctc?(p.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(p.inflation_verdict)}">${pctStr(p.inflation_percent)}</div></div></div></div></div>`;
-  }
-  if(data.bank_analysis?.present){
-    const b=data.bank_analysis;
-    h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">🏦 Bank Statement</span><span class="vbadge ${b.consistency==='CONSISTENT'?'vb-green':b.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${b.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Credits found</div><div class="ctc-stat-val">${b.credits_found||0} months</div></div><div class="ctc-stat"><div class="ctc-stat-label">Avg Monthly</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.avg_monthly_credit?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(b.inflation_verdict)}">${pctStr(b.inflation_percent)}</div></div></div></div></div>`;
-  }
+  if(data.salary_slip?.present){const s=data.salary_slip;const sBadge=s.verdict==='GENUINE'?'vb-green':s.verdict==='SUSPICIOUS'?'vb-amber':'vb-red';h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📄 Salary Slip</span><span class="vbadge ${sBadge}" style="font-size:.62rem">${s.verdict||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Gross/month</div><div class="ctc-stat-val">₹${s.extracted?.gross?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${s.derived_annual_ctc?(s.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(s.inflation_verdict)}">${pctStr(s.inflation_percent)}</div></div></div></div></div>`;}
+  if(data.pf_analysis?.present){const p=data.pf_analysis;h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">📋 PF History</span><span class="vbadge ${p.consistency==='CONSISTENT'?'vb-green':p.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${p.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Avg PF/month</div><div class="ctc-stat-val">₹${p.avg_pf_monthly?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Derived Annual</div><div class="ctc-stat-val" style="color:var(--blue)">₹${p.derived_annual_ctc?(p.derived_annual_ctc/100000).toFixed(2)+'L':'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(p.inflation_verdict)}">${pctStr(p.inflation_percent)}</div></div></div></div></div>`;}
+  if(data.bank_analysis?.present){const b=data.bank_analysis;h+=`<div class="ctc-source-card"><div class="ctc-source-head"><span class="ctc-source-title">🏦 Bank Statement</span><span class="vbadge ${b.consistency==='CONSISTENT'?'vb-green':b.consistency==='INCONSISTENT'?'vb-red':'vb-amber'}" style="font-size:.62rem">${b.consistency||'—'}</span></div><div class="ctc-source-body"><div class="ctc-stat-row"><div class="ctc-stat"><div class="ctc-stat-label">Credits found</div><div class="ctc-stat-val">${b.credits_found||0} months</div></div><div class="ctc-stat"><div class="ctc-stat-label">Avg Monthly</div><div class="ctc-stat-val" style="color:var(--blue)">₹${b.avg_monthly_credit?.toLocaleString('en-IN')||'—'}</div></div><div class="ctc-stat"><div class="ctc-stat-label">Inflation</div><div class="ctc-stat-val ${infClass(b.inflation_verdict)}">${pctStr(b.inflation_percent)}</div></div></div></div></div>`;}
   if(data.red_flags?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">⚠ Red Flags</span></div><div class="rcard-body"><div class="flag-list">`;data.red_flags.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-red"></div>${f}</div>`;});h+=`</div></div></div>`;}
   if(data.positive_signals?.length){h+=`<div class="rcard"><div class="rcard-head"><span class="rcard-title">✓ Positive Signals</span></div><div class="rcard-body"><div class="flag-list">`;data.positive_signals.forEach(f=>{h+=`<div class="flag-item"><div class="flag-dot fd-green"></div>${f}</div>`;});h+=`</div></div></div>`;}
   return h+'</div>';
@@ -1611,21 +1601,18 @@ function renderCTCVerification(data){
 // ── Summarize for history ──────────────────────────────────────────────────────
 function summarize(data) {
   const t = data.type || '';
-  if (t === 'full_analysis') return `[Full Analysis] ${data.final_decision || '?'}: ${data.final_decision_reason || ''}`;
-  if (t === 'jd_resume')     return `[JD Match] ${data.candidate?.name||'?'}: ${data.scorecard?.match_percentage||0}% — ${data.scorecard?.recommendation||'?'}`;
-  if (t === 'multi_rank')    return `[Ranking] ${data.candidates?.length||0} candidates`;
-  if (t === 'offer_letter')  return `[Offer] ${data.verdict} (${data.overall_score}/100)`;
-  if (t === 'employment')    return `[Employment] ${data.verdict} — ${data.verdict_reason||''}`;
-  if (t === 'ctc_verification') return `[CTC Check] ${data.overall_verdict} (${data.claimed_ctc_lpa?.toFixed(1)||'?'} LPA)`;
+  if (t === 'full_analysis')     return `[Full Analysis] ${data.final_decision || '?'}: ${data.final_decision_reason || ''}`;
+  if (t === 'jd_resume')         return `[JD Match] ${data.candidate?.name||'?'}: ${data.scorecard?.match_percentage||0}% — ${data.scorecard?.recommendation||'?'}`;
+  if (t === 'multi_rank')        return `[Ranking] ${data.candidates?.length||0} candidates`;
+  if (t === 'offer_letter')      return `[Offer] ${data.verdict} (${data.overall_score}/100)`;
+  if (t === 'employment')        return `[Employment] ${data.verdict} — ${data.verdict_reason||''}`;
+  if (t === 'ctc_verification')  return `[CTC Check] ${data.overall_verdict} (${data.claimed_ctc_lpa?.toFixed(1)||'?'} LPA)`;
   return '[Analysis complete]';
 }
 
-// ── Boot: restore session if available ────────────────────────────────────────
+// ── Boot ───────────────────────────────────────────────────────────────────────
 if (session.resumeUploaded && session.resumeDoc) {
-  // Auto-start session on load if resume was saved
-  window.addEventListener('DOMContentLoaded', () => {
-    startSession();
-  });
+  window.addEventListener('DOMContentLoaded', () => { startSession(); });
 }
 </script>
 </body>
