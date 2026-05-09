@@ -977,7 +977,7 @@ async function runAnalysis() {
   addTyping();
 
   try {
-    const res = await fetch('/.netlify/functions/agent', {
+    const res = await fetch('/api/agent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ documents: payload, history: session.history.slice(-6), claimedCTC: session.claimedCTC }),
@@ -1078,7 +1078,7 @@ async function send() {
   addTyping(); setStatus('Thinking…');
 
   try {
-    const res = await fetch('/.netlify/functions/agent', {
+    const res = await fetch('/api/agent', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: text, history: session.history.slice(-8) })
     });
